@@ -17,6 +17,9 @@ const authenticate = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not found.' });
     }
+    if (!user.is_active) {
+      return res.status(403).json({ success: false, message: 'Account is deactivated.' });
+    }
 
     req.user = user;
     next();
@@ -35,4 +38,11 @@ const authorizeAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, authorizeAdmin };
+const authorizeAdminOrStaff = (req, res, next) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'staff') {
+    return res.status(403).json({ success: false, message: 'Access denied.' });
+  }
+  next();
+};
+
+module.exports = { authenticate, authorizeAdmin, authorizeAdminOrStaff };

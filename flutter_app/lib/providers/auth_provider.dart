@@ -12,6 +12,9 @@ class AuthProvider extends ChangeNotifier {
   String? get token => _token;
   UserModel? get user => _user;
   bool get isAuthenticated => _token != null;
+  bool get isAdmin => _user?.role == 'admin';
+  bool get isStaff => _user?.role == 'staff';
+  bool get isAdminOrStaff => isAdmin || isStaff;
   bool get loading => _loading;
   String? get error => _error;
 
@@ -28,50 +31,40 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> register({
-    required String name,
-    required String email,
-    required String password,
-  }) async {
-    _loading = true;
-    _error = null;
-    notifyListeners();
+  Future<bool> register({required String name, required String email, required String password}) async {
+    _loading = true; _error = null; notifyListeners();
     try {
       final res = await ApiService.register(name: name, email: email, password: password);
-      if (res['success'] == true) {
-        await _saveSession(res);
-        return true;
-      }
+      if (res['success'] == true) { await _saveSession(res); return true; }
       _error = res['message'] as String? ?? 'Registration failed.';
       return false;
     } catch (e) {
-      _error = 'Connection error. Check your network.';
+      _error = 'Connection error. Check your network.'; return false;
+    } finally { _loading = false; notifyListeners(); }
+  }
+
+  Future<bool> registerAdmin({required String name, required String email, required String password, required String adminSecret}) async {
+    _loading = true; _error = null; notifyListeners();
+    try {
+      final res = await ApiService.registerAdmin(name: name, email: email, password: password, adminSecret: adminSecret);
+      if (res['success'] == true) { await _saveSession(res); return true; }
+      _error = res['message'] as String? ?? 'Registration failed.';
       return false;
-    } finally {
-      _loading = false;
-      notifyListeners();
-    }
+    } catch (e) {
+      _error = 'Connection error. Check your network.'; return false;
+    } finally { _loading = false; notifyListeners(); }
   }
 
   Future<bool> login({required String email, required String password}) async {
-    _loading = true;
-    _error = null;
-    notifyListeners();
+    _loading = true; _error = null; notifyListeners();
     try {
       final res = await ApiService.login(email: email, password: password);
-      if (res['success'] == true) {
-        await _saveSession(res);
-        return true;
-      }
+      if (res['success'] == true) { await _saveSession(res); return true; }
       _error = res['message'] as String? ?? 'Login failed.';
       return false;
     } catch (e) {
-      _error = 'Connection error. Check your network.';
-      return false;
-    } finally {
-      _loading = false;
-      notifyListeners();
-    }
+      _error = 'Connection error. Check your network.'; return false;
+    } finally { _loading = false; notifyListeners(); }
   }
 
   Future<void> _saveSession(Map<String, dynamic> res) async {
@@ -87,15 +80,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    _token = null;
-    _user = null;
+    _token = null; _user = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     notifyListeners();
   }
 
-  void clearError() {
-    _error = null;
-    notifyListeners();
-  }
+  void clearError() { _error = null; notifyListeners(); }
 }
