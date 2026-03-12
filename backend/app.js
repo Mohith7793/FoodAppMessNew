@@ -11,8 +11,13 @@ const orderRoutes = require('./routes/orderRoutes');
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// Middleware — fully open CORS for development
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+app.options('*', cors()); // Handle preflight for all routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
