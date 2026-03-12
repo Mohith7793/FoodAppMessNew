@@ -22,12 +22,16 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     role: {
-      type: DataTypes.ENUM('admin', 'customer'),
+      type: DataTypes.ENUM('admin', 'staff', 'customer'),
       defaultValue: 'customer',
+    },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
     email_verified: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true, // Testing mode: always true
+      defaultValue: true,
     },
   }, {
     tableName: 'Users',

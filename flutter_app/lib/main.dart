@@ -6,6 +6,7 @@ import 'providers/cart_provider.dart';
 import 'providers/order_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/admin/admin_shell.dart';
 
 void main() {
   runApp(const FoodMessApp());
@@ -41,56 +42,27 @@ class FoodMessApp extends StatelessWidget {
             foregroundColor: Colors.white,
             elevation: 0,
             centerTitle: false,
-            titleTextStyle: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: 0.3,
-            ),
+            titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.3),
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF6B35),
               foregroundColor: Colors.white,
               elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
-              ),
+              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 0.5),
             ),
           ),
           inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: Colors.white,
+            filled: true, fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFFF6B35), width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.red),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFF6B35), width: 2)),
+            errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.red)),
           ),
-          cardTheme: CardThemeData(
-            elevation: 3,
-            shadowColor: Colors.black12,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            color: Colors.white,
-          ),
+          cardTheme: CardThemeData(elevation: 3, shadowColor: Colors.black12, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), color: Colors.white),
           useMaterial3: true,
         ),
         home: const AppEntryPoint(),
@@ -101,7 +73,6 @@ class FoodMessApp extends StatelessWidget {
 
 class AppEntryPoint extends StatefulWidget {
   const AppEntryPoint({super.key});
-
   @override
   State<AppEntryPoint> createState() => _AppEntryPointState();
 }
@@ -110,10 +81,7 @@ class _AppEntryPointState extends State<AppEntryPoint> {
   bool _initialized = false;
 
   @override
-  void initState() {
-    super.initState();
-    _init();
-  }
+  void initState() { super.initState(); _init(); }
 
   Future<void> _init() async {
     await context.read<AuthProvider>().loadToken();
@@ -123,13 +91,11 @@ class _AppEntryPointState extends State<AppEntryPoint> {
   @override
   Widget build(BuildContext context) {
     if (!_initialized) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: Color(0xFFFF6B35)),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFFF6B35))));
     }
     final auth = context.watch<AuthProvider>();
-    return auth.isAuthenticated ? const HomeScreen() : const LoginScreen();
+    if (!auth.isAuthenticated) return const LoginScreen();
+    if (auth.isAdminOrStaff) return const AdminShell();
+    return const HomeScreen();
   }
 }
