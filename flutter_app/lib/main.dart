@@ -85,7 +85,7 @@ class FoodMessApp extends StatelessWidget {
               borderSide: const BorderSide(color: Colors.red),
             ),
           ),
-          cardTheme: CardTheme(
+          cardTheme: CardThemeData(
             elevation: 3,
             shadowColor: Colors.black12,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
