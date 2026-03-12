@@ -4,7 +4,7 @@ import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/order_provider.dart';
 import '../models/cart_model.dart';
-import 'orders_screen.dart';
+import 'order_success_screen.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -297,13 +297,14 @@ class _OrderSummary extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _PlaceOrderSheet(),
+      builder: (_) => _PlaceOrderSheet(cartContext: context),
     );
   }
 }
 
 class _PlaceOrderSheet extends StatefulWidget {
-  const _PlaceOrderSheet();
+  final BuildContext cartContext;
+  const _PlaceOrderSheet({required this.cartContext});
 
   @override
   State<_PlaceOrderSheet> createState() => _PlaceOrderSheetState();
@@ -320,14 +321,10 @@ class _PlaceOrderSheetState extends State<_PlaceOrderSheet> {
     final order = await orders.placeOrder(token: token, notes: _notesCtrl.text.trim());
     if (order != null && mounted) {
       cart.clearLocalCart();
+      final nav = Navigator.of(widget.cartContext);
       Navigator.pop(context); // close sheet
-      Navigator.pop(context); // close cart screen
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Order #${order.id} placed successfully! 🎉'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
+      nav.pushReplacement(
+        MaterialPageRoute(builder: (_) => OrderSuccessScreen(order: order)),
       );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

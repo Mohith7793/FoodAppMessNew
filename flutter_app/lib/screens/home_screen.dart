@@ -20,6 +20,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final _searchCtrl = TextEditingController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  static const _mealTimes = [
+    {'label': 'Breakfast', 'icon': '🌅'},
+    {'label': 'Lunch', 'icon': '☀️'},
+    {'label': 'Dinner', 'icon': '🌙'},
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -96,6 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
           slivers: [
             SliverToBoxAdapter(child: _buildHeader(auth)),
             SliverToBoxAdapter(child: _buildSearchBar(products)),
+            SliverToBoxAdapter(child: _buildMealTimeFilter(products)),
             SliverToBoxAdapter(child: _buildCategoryFilter(products)),
             if (products.loading)
               const SliverFillRemaining(
@@ -181,44 +188,125 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCategoryFilter(ProductProvider products) {
-    return SizedBox(
-      height: 46,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: products.categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (ctx, i) {
-          final cat = products.categories[i];
-          final selected = products.selectedCategory == cat;
-          return GestureDetector(
-            onTap: () => products.setCategory(cat),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: selected ? const Color(0xFFFF6B35) : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: selected ? const Color(0xFFFF6B35) : const Color(0xFFE0E0E0),
-                ),
-                boxShadow: selected
-                    ? [BoxShadow(color: const Color(0xFFFF6B35).withOpacity(0.3), blurRadius: 8)]
-                    : [],
-              ),
-              child: Text(
-                cat,
-                style: TextStyle(
-                  color: selected ? Colors.white : Colors.grey[700],
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 13,
-                ),
-              ),
+  Widget _buildMealTimeFilter(ProductProvider products) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Meal Time',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF888888),
+              letterSpacing: 0.5,
             ),
-          );
-        },
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: _mealTimes.map((m) {
+              final label = m['label']!;
+              final icon = m['icon']!;
+              final selected = products.selectedMealTime == label;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => products.setMealTime(label),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selected ? const Color(0xFFFF6B35) : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: selected ? const Color(0xFFFF6B35) : const Color(0xFFE0E0E0),
+                      ),
+                      boxShadow: selected
+                          ? [BoxShadow(color: const Color(0xFFFF6B35).withOpacity(0.3), blurRadius: 8)]
+                          : [],
+                    ),
+                    child: Column(
+                      children: [
+                        Text(icon, style: const TextStyle(fontSize: 20)),
+                        const SizedBox(height: 4),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            color: selected ? Colors.white : Colors.grey[700],
+                            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 10),
+        ],
       ),
+    );
+  }
+
+  Widget _buildCategoryFilter(ProductProvider products) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Text(
+            'Category',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF888888),
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 38,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: products.categories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (ctx, i) {
+              final cat = products.categories[i];
+              final selected = products.selectedCategory == cat && products.selectedMealTime == null;
+              return GestureDetector(
+                onTap: () => products.setCategory(cat),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: selected ? const Color(0xFFFF6B35) : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: selected ? const Color(0xFFFF6B35) : const Color(0xFFE0E0E0),
+                    ),
+                    boxShadow: selected
+                        ? [BoxShadow(color: const Color(0xFFFF6B35).withOpacity(0.3), blurRadius: 8)]
+                        : [],
+                  ),
+                  child: Text(
+                    cat,
+                    style: TextStyle(
+                      color: selected ? Colors.white : Colors.grey[700],
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
     );
   }
 
