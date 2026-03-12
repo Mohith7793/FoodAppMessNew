@@ -3,11 +3,11 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   // ✅ Mac + iOS Simulator / Chrome:
-  static const String baseUrl = 'http://localhost:5000/api';
+  static const String baseUrl = 'http://localhost:5001/api';
   // 🤖 Android Emulator — uncomment this instead:
-  // static const String baseUrl = 'http://10.0.2.2:5000/api';
+  // static const String baseUrl = 'http://10.0.2.2:5001/api';
   // 📱 Physical device — use your Mac's WiFi IP:
-  // static const String baseUrl = 'http://192.168.X.X:5000/api';
+  // static const String baseUrl = 'http://192.168.X.X:5001/api';
 
   static Map<String, String> _headers({String? token}) {
     final headers = {'Content-Type': 'application/json'};
