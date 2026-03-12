@@ -7,15 +7,25 @@ class ProductProvider extends ChangeNotifier {
   bool _loading = false;
   String? _error;
   String _selectedCategory = 'All';
+  String? _selectedMealTime;
 
-  List<Product> get products => _selectedCategory == 'All'
-      ? _products
-      : _products.where((p) => p.category == _selectedCategory).toList();
+  List<Product> get products {
+    var result = _selectedCategory == 'All'
+        ? _products
+        : _products.where((p) => p.category == _selectedCategory).toList();
+    if (_selectedMealTime != null) {
+      result = result
+          .where((p) => p.category.toLowerCase() == _selectedMealTime!.toLowerCase())
+          .toList();
+    }
+    return result;
+  }
 
   List<Product> get allProducts => _products;
   bool get loading => _loading;
   String? get error => _error;
   String get selectedCategory => _selectedCategory;
+  String? get selectedMealTime => _selectedMealTime;
 
   List<String> get categories {
     final cats = _products.map((p) => p.category).toSet().toList();
@@ -45,6 +55,14 @@ class ProductProvider extends ChangeNotifier {
 
   void setCategory(String category) {
     _selectedCategory = category;
+    _selectedMealTime = null; // reset meal time when category selected
+    notifyListeners();
+  }
+
+  void setMealTime(String mealTime) {
+    // toggle off if already selected
+    _selectedMealTime = _selectedMealTime == mealTime ? null : mealTime;
+    _selectedCategory = 'All'; // reset category when meal time selected
     notifyListeners();
   }
 }

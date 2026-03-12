@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import '../models/order_model.dart';
@@ -59,6 +61,53 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 }
 
+String _paymentStatusLabel(String orderStatus) {
+  switch (orderStatus) {
+    case 'delivered':
+      return 'Paid';
+    case 'cancelled':
+      return 'Cancelled';
+    case 'confirmed':
+    case 'preparing':
+    case 'ready':
+      return 'Confirmed';
+    default:
+      return 'Pending';
+  }
+}
+
+Color _paymentStatusColor(String orderStatus) {
+  switch (orderStatus) {
+    case 'delivered':
+      return Colors.green;
+    case 'cancelled':
+      return Colors.red;
+    case 'confirmed':
+    case 'preparing':
+    case 'ready':
+      return Colors.blue;
+    default:
+      return Colors.orange;
+  }
+}
+
+String _buildQRData(Order order) {
+  return jsonEncode({
+    'order_id': order.id,
+    'payment_status': _paymentStatusLabel(order.status).toLowerCase(),
+    'order_status': order.status,
+    'total': order.totalPrice.toStringAsFixed(2),
+    'items': order.items
+        .map((i) => {
+              'name': i.product?.name ?? 'Item #${i.productId}',
+              'qty': i.quantity,
+              'price': i.price.toStringAsFixed(2),
+            })
+        .toList(),
+    'ordered_at': order.createdAt.toIso8601String(),
+  });
+}
+
 class _OrderCard extends StatelessWidget {
   final Order order;
 
@@ -91,6 +140,8 @@ class _OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(order.createdAt.toLocal());
+    final payLabel = _paymentStatusLabel(order.status);
+    final payColor = _paymentStatusColor(order.status);
 
     return GestureDetector(
       onTap: () => _showOrderDetail(context),
@@ -124,27 +175,53 @@ class _OrderCard extends StatelessWidget {
                           style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: _statusColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(_statusIcon, color: Colors.white, size: 14),
-                        const SizedBox(width: 4),
-                        Text(order.statusLabel,
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
-                      ],
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // Order status
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _statusColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(_statusIcon, color: Colors.white, size: 13),
+                            const SizedBox(width: 4),
+                            Text(order.statusLabel,
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      // Payment status
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: payColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: payColor.withOpacity(0.4)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.payment, color: payColor, size: 12),
+                            const SizedBox(width: 4),
+                            Text('Payment: $payLabel',
+                                style: TextStyle(
+                                    color: payColor, fontSize: 11, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            // Items
+            // Items preview
             Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -190,13 +267,20 @@ class _OrderCard extends StatelessWidget {
                     children: [
                       Text('${order.items.fold(0, (s, i) => s + i.quantity)} items',
                           style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                      Text(
-                        '₹${order.totalPrice.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFFFF6B35),
-                        ),
+                      Row(
+                        children: [
+                          // QR icon hint
+                          Icon(Icons.qr_code, color: Colors.grey[400], size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            '₹${order.totalPrice.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFFF6B35),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -219,15 +303,26 @@ class _OrderCard extends StatelessWidget {
   }
 }
 
-class _OrderDetailSheet extends StatelessWidget {
+class _OrderDetailSheet extends StatefulWidget {
   final Order order;
   const _OrderDetailSheet({required this.order});
 
   @override
+  State<_OrderDetailSheet> createState() => _OrderDetailSheetState();
+}
+
+class _OrderDetailSheetState extends State<_OrderDetailSheet> {
+  bool _showQR = false;
+
+  @override
   Widget build(BuildContext context) {
+    final payLabel = _paymentStatusLabel(widget.order.status);
+    final payColor = _paymentStatusColor(widget.order.status);
+    final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(widget.order.createdAt.toLocal());
+
     return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.4,
+      initialChildSize: 0.75,
+      minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (ctx, ctrl) => Container(
         decoration: const BoxDecoration(
@@ -244,13 +339,20 @@ class _OrderDetailSheet extends StatelessWidget {
                   color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Order #${order.id}',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                  Text('₹${order.totalPrice.toStringAsFixed(2)}',
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Order #${widget.order.id}',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                      Text(dateStr,
+                          style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                    ],
+                  ),
+                  Text('₹${widget.order.totalPrice.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
@@ -259,39 +361,149 @@ class _OrderDetailSheet extends StatelessWidget {
                 ],
               ),
             ),
-            Expanded(
-              child: ListView(
-                controller: ctrl,
-                padding: const EdgeInsets.all(20),
+            // Payment status + QR toggle
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Row(
                 children: [
-                  ...order.items.map((item) => Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8F9FA),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(item.product?.name ?? 'Product',
-                                  style: const TextStyle(fontWeight: FontWeight.w600)),
-                            ),
-                            Text('x${item.quantity}',
-                                style: TextStyle(color: Colors.grey[600])),
-                            const SizedBox(width: 12),
-                            Text('₹${item.subtotal.toStringAsFixed(0)}',
-                                style: const TextStyle(fontWeight: FontWeight.w700)),
-                          ],
-                        ),
-                      )),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: payColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: payColor.withOpacity(0.4)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.payment, color: payColor, size: 14),
+                        const SizedBox(width: 5),
+                        Text('Payment: $payLabel',
+                            style: TextStyle(
+                                color: payColor, fontWeight: FontWeight.w700, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () => setState(() => _showQR = !_showQR),
+                    icon: Icon(_showQR ? Icons.list : Icons.qr_code,
+                        size: 18, color: const Color(0xFFFF6B35)),
+                    label: Text(
+                      _showQR ? 'View Items' : 'Show QR',
+                      style: const TextStyle(color: Color(0xFFFF6B35), fontWeight: FontWeight.w700),
+                    ),
+                  ),
                 ],
               ),
+            ),
+            const Divider(height: 16),
+            Expanded(
+              child: _showQR ? _buildQRView() : _buildItemsList(ctrl),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildQRView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          const Text(
+            'Order QR Code',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Show this at the counter to collect your order',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE0E0E0)),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4))
+              ],
+            ),
+            child: QrImageView(
+              data: _buildQRData(widget.order),
+              version: QrVersions.auto,
+              size: 220,
+              backgroundColor: Colors.white,
+              errorCorrectionLevel: QrErrorCorrectLevel.M,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Order ID: #${widget.order.id}',
+              style: const TextStyle(
+                  color: Color(0xFFFF6B35), fontWeight: FontWeight.w800, fontSize: 15),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemsList(ScrollController ctrl) {
+    return ListView(
+      controller: ctrl,
+      padding: const EdgeInsets.all(20),
+      children: [
+        ...widget.order.items.map((item) => Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F9FA),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(item.product?.name ?? 'Product',
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                  Text('x${item.quantity}',
+                      style: TextStyle(color: Colors.grey[600])),
+                  const SizedBox(width: 12),
+                  Text('₹${item.subtotal.toStringAsFixed(0)}',
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                ],
+              ),
+            )),
+        if (widget.order.notes != null && widget.order.notes!.isNotEmpty) ...[
+          const Divider(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.note_alt_outlined, size: 16, color: Colors.grey),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(widget.order.notes!,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }
