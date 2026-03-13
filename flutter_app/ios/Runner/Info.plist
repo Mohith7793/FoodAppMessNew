@@ -43,6 +43,10 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<!-- Camera permission for QR scanner -->
+	<key>NSCameraUsageDescription</key>
+	<string>Camera is used to scan student QR codes for order verification.</string>
+
 	<!-- Allow HTTP (non-HTTPS) for development -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
