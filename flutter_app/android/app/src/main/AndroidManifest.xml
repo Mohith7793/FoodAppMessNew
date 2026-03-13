@@ -4,6 +4,11 @@
     <!-- Internet permission required -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- Camera permission for QR scanner -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
+
     <application
         android:label="Mess Food"
         android:name="${applicationName}"
