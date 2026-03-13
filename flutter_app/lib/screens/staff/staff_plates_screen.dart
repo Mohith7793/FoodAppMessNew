@@ -72,93 +72,154 @@ class _StaffPlatesScreenState extends State<StaffPlatesScreen> {
               : RefreshIndicator(
                   onRefresh: _fetch,
                   color: _kOrange,
-                  child: CustomScrollView(
+                  child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(children: [
-                            _SummaryTile(label: 'Total Plates', value: '$_totalPlates', icon: Icons.set_meal, color: _kOrange),
-                            const SizedBox(width: 12),
-                            _SummaryTile(label: 'Active Orders', value: '$_activeOrderCount', icon: Icons.receipt_long, color: Colors.blue),
-                          ]),
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      // ── Summary header ──────────────────────────────────
+                      Row(children: [
+                        _StatBox(
+                          label: 'Total Plates',
+                          value: '$_totalPlates',
+                          icon: Icons.set_meal,
+                          color: _kOrange,
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        _StatBox(
+                          label: 'Active Orders',
+                          value: '$_activeOrderCount',
+                          icon: Icons.receipt_long,
+                          color: Colors.blue,
+                        ),
+                      ]),
+                      const SizedBox(height: 20),
+
                       if (_summary.isEmpty)
-                        const SliverFillRemaining(
-                          child: Center(
-                            child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 48),
+                          child: const Column(
+                            children: [
                               Icon(Icons.check_circle_outline, color: Colors.green, size: 56),
                               SizedBox(height: 12),
                               Text('No active orders!', style: TextStyle(color: Colors.white54, fontSize: 16)),
                               SizedBox(height: 4),
-                              Text('All orders are delivered or cancelled.', style: TextStyle(color: Colors.white38, fontSize: 13)),
-                            ]),
+                              Text('Nothing to prepare right now.', style: TextStyle(color: Colors.white38, fontSize: 13)),
+                            ],
                           ),
                         )
-                      else
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (ctx, i) {
-                                final item = _summary[i] as Map<String, dynamic>;
-                                final plates = item['total_plates'] as int? ?? 0;
-                                final name = item['name'] as String? ?? 'Unknown';
-                                final category = item['category'] as String? ?? '';
-                                final maxPlates = (_summary.isNotEmpty)
-                                    ? ((_summary[0] as Map<String, dynamic>)['total_plates'] as int? ?? 1)
-                                    : 1;
-                                final fraction = plates / (maxPlates == 0 ? 1 : maxPlates);
+                      else ...[
+                        // ── Section title ──────────────────────────────────
+                        Row(children: [
+                          const Icon(Icons.restaurant, color: Color(0xFFFF6B35), size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Preparation List  ·  ${_summary.length} item${_summary.length == 1 ? '' : 's'}',
+                            style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w700, fontSize: 14),
+                          ),
+                        ]),
+                        const SizedBox(height: 12),
 
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  padding: const EdgeInsets.all(16),
+                        // ── Numbered food preparation list ─────────────────
+                        ...List.generate(_summary.length, (i) {
+                          final item = _summary[i] as Map<String, dynamic>;
+                          final plates = item['total_plates'] as int? ?? 0;
+                          final name = item['name'] as String? ?? 'Unknown';
+                          final category = item['category'] as String? ?? '';
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            decoration: BoxDecoration(
+                              color: _kCard,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.white10),
+                            ),
+                            child: Row(
+                              children: [
+                                // Serial number
+                                Container(
+                                  width: 48,
+                                  height: 72,
                                   decoration: BoxDecoration(
-                                    color: _kCard,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.white10),
+                                    color: _kOrange.withOpacity(0.12),
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(14),
+                                      bottomLeft: Radius.circular(14),
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${i + 1}',
+                                      style: TextStyle(
+                                        color: _kOrange.withOpacity(0.7),
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // Food name + category
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        if (category.isNotEmpty) ...[
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            category,
+                                            style: const TextStyle(color: Colors.white38, fontSize: 12),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                // Quantity badge — the most important number
+                                Container(
+                                  width: 80,
+                                  height: 72,
+                                  decoration: BoxDecoration(
+                                    color: _kOrange.withOpacity(0.15),
+                                    borderRadius: const BorderRadius.only(
+                                      topRight: Radius.circular(14),
+                                      bottomRight: Radius.circular(14),
+                                    ),
+                                    border: Border(left: BorderSide(color: _kOrange.withOpacity(0.25))),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Row(children: [
-                                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                          Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
-                                          if (category.isNotEmpty)
-                                            Text(category, style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                                        ])),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                          decoration: BoxDecoration(color: _kOrange.withOpacity(0.15), borderRadius: BorderRadius.circular(10), border: Border.all(color: _kOrange.withOpacity(0.4))),
-                                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                            const Icon(Icons.set_meal, color: _kOrange, size: 18),
-                                            const SizedBox(width: 6),
-                                            Text('$plates', style: const TextStyle(color: _kOrange, fontSize: 22, fontWeight: FontWeight.w900)),
-                                            const SizedBox(width: 4),
-                                            const Text('plates', style: TextStyle(color: Colors.white60, fontSize: 12)),
-                                          ]),
+                                      Text(
+                                        '$plates',
+                                        style: const TextStyle(
+                                          color: Color(0xFFFF6B35),
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.w900,
+                                          height: 1,
                                         ),
-                                      ]),
-                                      const SizedBox(height: 12),
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(4),
-                                        child: LinearProgressIndicator(
-                                          value: fraction,
-                                          backgroundColor: Colors.white10,
-                                          valueColor: AlwaysStoppedAnimation<Color>(_kOrange),
-                                          minHeight: 6,
-                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      const Text(
+                                        'plates',
+                                        style: TextStyle(color: Colors.white54, fontSize: 11),
                                       ),
                                     ],
                                   ),
-                                );
-                              },
-                              childCount: _summary.length,
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
+                          );
+                        }),
+                      ],
                     ],
                   ),
                 ),
@@ -166,30 +227,30 @@ class _StaffPlatesScreenState extends State<StaffPlatesScreen> {
   }
 }
 
-class _SummaryTile extends StatelessWidget {
+class _StatBox extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
   final Color color;
 
-  const _SummaryTile({required this.label, required this.value, required this.icon, required this.color});
+  const _StatBox({required this.label, required this.value, required this.icon, required this.color});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withOpacity(0.25)),
         ),
         child: Row(children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(width: 12),
+          Icon(icon, color: color, size: 26),
+          const SizedBox(width: 10),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(value, style: TextStyle(color: color, fontSize: 26, fontWeight: FontWeight.w900)),
-            Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            Text(value, style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.w900, height: 1)),
+            Text(label, style: const TextStyle(color: Colors.white54, fontSize: 11)),
           ]),
         ]),
       ),
