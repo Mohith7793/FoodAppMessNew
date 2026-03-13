@@ -7,6 +7,7 @@ import 'providers/order_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/admin/admin_shell.dart';
+import 'screens/staff/staff_shell.dart';
 
 void main() {
   runApp(const FoodMessApp());
@@ -95,7 +96,8 @@ class _AppEntryPointState extends State<AppEntryPoint> {
     }
     final auth = context.watch<AuthProvider>();
     if (!auth.isAuthenticated) return const LoginScreen();
-    if (auth.isAdminOrStaff) return const AdminShell();
+    if (auth.isAdmin) return const AdminShell();
+    if (auth.isStaff) return const StaffShell();
     return const HomeScreen();
   }
 }

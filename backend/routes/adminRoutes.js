@@ -6,7 +6,9 @@ const path = require('path');
 const multer = require('multer');
 const {
   createStaff, getStaff, toggleStaff, updateStaff, deleteStaff,
-  getDashboard, getGlobalOrders, updateOrderStatus, getAdminProducts,
+  getDashboard, getGlobalOrders, updateOrderStatus,
+  getOrdersByUser, getPlatesSummary,
+  getAdminProducts,
 } = require('../controllers/adminController');
 const { authenticate, authorizeAdmin, authorizeAdminOrStaff } = require('../middleware/authMiddleware');
 
@@ -43,6 +45,8 @@ router.get('/dashboard', authorizeAdminOrStaff, getDashboard);
 // ── Global Orders (admin + staff) ─────────────────────────────────────────────
 router.get('/orders', authorizeAdminOrStaff, getGlobalOrders);
 router.put('/orders/:id/status', authorizeAdminOrStaff, updateOrderStatus);
+router.get('/orders/user/:userId', authorizeAdminOrStaff, getOrdersByUser);
+router.get('/orders/plates', authorizeAdminOrStaff, getPlatesSummary);
 
 // ── Admin Products (admin only, includes unavailable) ─────────────────────────
 router.get('/products', authorizeAdmin, getAdminProducts);

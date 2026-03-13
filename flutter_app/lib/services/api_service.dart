@@ -165,4 +165,18 @@ class ApiService {
     final res = await http.put(Uri.parse('$baseUrl/admin/orders/$orderId/status'), headers: _headers(token: token), body: jsonEncode({'status': status}));
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
+
+  // ── STAFF: QR SCAN — orders for a specific student ─────────────────────────
+
+  static Future<Map<String, dynamic>> getOrdersByUser(String token, int userId) async {
+    final res = await http.get(Uri.parse('$baseUrl/admin/orders/user/$userId'), headers: _headers(token: token));
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  // ── STAFF: PLATES SUMMARY ──────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getPlatesSummary(String token) async {
+    final res = await http.get(Uri.parse('$baseUrl/admin/orders/plates'), headers: _headers(token: token));
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
 }

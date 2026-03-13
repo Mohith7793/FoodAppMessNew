@@ -19,6 +19,7 @@ dependencies:
   cupertino_icons: ^1.0.6
   intl: ^0.18.1
   qr_flutter: ^4.1.0
+  mobile_scanner: ^5.2.3
   image_picker: ^1.0.4
 
 dev_dependencies:
