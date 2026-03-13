@@ -61,7 +61,7 @@ const registerAdmin = async (req, res) => {
       return res.status(409).json({ success: false, message: 'Email already registered.' });
     }
     const hashedPassword = await bcrypt.hash(password, 12);
-    const user = await User.create({ name, email, password: hashedPassword, role: 'admin', email_verified: true, is_active: true });
+    const user = await User.create({ name, email, password: hashedPassword, role: 'admin', email_verified: true });
     const token = generateToken(user);
     return res.status(201).json({
       success: true,
@@ -85,9 +85,6 @@ const login = async (req, res) => {
     const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
-    }
-    if (!user.is_active) {
-      return res.status(403).json({ success: false, message: 'Account is deactivated. Contact admin.' });
     }
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
