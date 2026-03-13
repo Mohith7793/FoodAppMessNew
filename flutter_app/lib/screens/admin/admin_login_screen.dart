@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/cart_provider.dart';
 import 'admin_shell.dart';
 import 'admin_register_screen.dart';
+import '../staff/staff_shell.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -33,19 +33,21 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       password: _passwordCtrl.text,
     );
     if (ok && mounted) {
-      if (auth.isAdminOrStaff) {
+      if (auth.isAdmin) {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const AdminShell()),
-          (_) => false,
+          MaterialPageRoute(builder: (_) => const AdminShell()), (_) => false,
+        );
+      } else if (auth.isStaff) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const StaffShell()), (_) => false,
         );
       } else {
-        auth.logout();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('This account does not have admin/staff access.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        await auth.logout();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('This account does not have admin/staff access.'), backgroundColor: Colors.red),
+          );
+        }
       }
     }
   }

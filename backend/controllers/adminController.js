@@ -6,7 +6,6 @@ const { Op } = require('sequelize');
 
 // ── STAFF MANAGEMENT ─────────────────────────────────────────────────────────
 
-// POST /api/admin/staff  — admin creates staff credentials
 const createStaff = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -21,11 +20,10 @@ const createStaff = async (req, res) => {
       return res.status(409).json({ success: false, message: 'Email already registered.' });
     }
     const hashedPassword = await bcrypt.hash(password, 12);
-    const staff = await User.create({ name, email, password: hashedPassword, role: 'staff', is_active: true, email_verified: true });
+    const staff = await User.create({ name, email, password: hashedPassword, role: 'staff', email_verified: true });
     return res.status(201).json({
-      success: true,
-      message: 'Staff member created.',
-      data: { id: staff.id, name: staff.name, email: staff.email, role: staff.role, is_active: staff.is_active, created_at: staff.created_at },
+      success: true, message: 'Staff member created.',
+      data: { id: staff.id, name: staff.name, email: staff.email, role: staff.role, created_at: staff.created_at },
     });
   } catch (error) {
     console.error('Create staff error:', error);
@@ -33,7 +31,6 @@ const createStaff = async (req, res) => {
   }
 };
 
-// GET /api/admin/staff  — list all staff
 const getStaff = async (req, res) => {
   try {
     const staff = await User.findAll({
@@ -47,23 +44,11 @@ const getStaff = async (req, res) => {
   }
 };
 
-// PUT /api/admin/staff/:id/toggle  — toggle staff active/inactive
+// MVP: is_active column not in DB yet, toggle is no-op
 const toggleStaff = async (req, res) => {
-  try {
-    const staff = await User.findOne({ where: { id: req.params.id, role: 'staff' } });
-    if (!staff) return res.status(404).json({ success: false, message: 'Staff member not found.' });
-    await staff.update({ is_active: !staff.is_active });
-    return res.status(200).json({
-      success: true,
-      message: `Staff member ${staff.is_active ? 'activated' : 'deactivated'}.`,
-      data: { id: staff.id, name: staff.name, is_active: staff.is_active },
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: 'Internal server error.' });
-  }
+  return res.status(200).json({ success: true, message: 'Toggle not available in MVP mode.' });
 };
 
-// PUT /api/admin/staff/:id  — update staff info / reset password
 const updateStaff = async (req, res) => {
   try {
     const staff = await User.findOne({ where: { id: req.params.id, role: 'staff' } });
@@ -78,7 +63,6 @@ const updateStaff = async (req, res) => {
   }
 };
 
-// DELETE /api/admin/staff/:id  — remove staff member
 const deleteStaff = async (req, res) => {
   try {
     const staff = await User.findOne({ where: { id: req.params.id, role: 'staff' } });
@@ -92,59 +76,34 @@ const deleteStaff = async (req, res) => {
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 
-// GET /api/admin/dashboard
 const getDashboard = async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [
-      totalOrders,
-      totalRevenue,
-      totalCustomers,
-      pendingOrders,
-      todayOrdersCount,
-      todayRevenue,
-      activeStaff,
-      inactiveStaff,
-      recentOrders,
-    ] = await Promise.all([
+    const [totalOrders, totalRevenue, totalCustomers, pendingOrders, todayOrdersCount, todayRevenue, totalStaff, recentOrders] = await Promise.all([
       Order.count(),
       Order.sum('total_price'),
       User.count({ where: { role: 'customer' } }),
       Order.count({ where: { status: 'pending' } }),
       Order.count({ where: { created_at: { [Op.gte]: today } } }),
       Order.sum('total_price', { where: { created_at: { [Op.gte]: today } } }),
-      User.count({ where: { role: 'staff', is_active: true } }),
-      User.count({ where: { role: 'staff', is_active: false } }),
-      Order.findAll({
-        limit: 5,
-        order: [['created_at', 'DESC']],
-        include: [{ model: User, as: 'user', attributes: ['name', 'email'] }],
-      }),
+      User.count({ where: { role: 'staff' } }),
+      Order.findAll({ limit: 5, order: [['created_at', 'DESC']], include: [{ model: User, as: 'user', attributes: ['name', 'email'] }] }),
     ]);
 
-    // Orders by status
     const orderStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'];
     const statusCounts = await Promise.all(
-      orderStatuses.map(async (status) => ({
-        status,
-        count: await Order.count({ where: { status } }),
-      }))
+      orderStatuses.map(async (status) => ({ status, count: await Order.count({ where: { status } }) }))
     );
 
     return res.status(200).json({
       success: true,
       data: {
-        totalOrders,
-        totalRevenue: totalRevenue || 0,
-        totalCustomers,
-        pendingOrders,
-        todayOrders: todayOrdersCount,
-        todayRevenue: todayRevenue || 0,
-        staff: { active: activeStaff, inactive: inactiveStaff },
-        ordersByStatus: statusCounts,
-        recentOrders,
+        totalOrders, totalRevenue: totalRevenue || 0, totalCustomers, pendingOrders,
+        todayOrders: todayOrdersCount, todayRevenue: todayRevenue || 0,
+        staff: { active: totalStaff, inactive: 0 },
+        ordersByStatus: statusCounts, recentOrders,
       },
     });
   } catch (error) {
@@ -155,7 +114,6 @@ const getDashboard = async (req, res) => {
 
 // ── GLOBAL ORDERS ─────────────────────────────────────────────────────────────
 
-// GET /api/admin/orders  — all orders with customer info
 const getGlobalOrders = async (req, res) => {
   try {
     const { status, page = 1, limit = 20 } = req.query;
@@ -166,10 +124,7 @@ const getGlobalOrders = async (req, res) => {
       where,
       include: [
         { model: User, as: 'user', attributes: ['id', 'name', 'email'] },
-        {
-          model: OrderItem, as: 'items',
-          include: [{ model: Product, as: 'product', attributes: ['id', 'name', 'image_url'] }],
-        },
+        { model: OrderItem, as: 'items', include: [{ model: Product, as: 'product', attributes: ['id', 'name', 'image_url'] }] },
       ],
       order: [['created_at', 'DESC']],
       limit: parseInt(limit),
@@ -177,8 +132,7 @@ const getGlobalOrders = async (req, res) => {
     });
 
     return res.status(200).json({
-      success: true,
-      data: orders,
+      success: true, data: orders,
       pagination: { total: count, page: parseInt(page), limit: parseInt(limit), totalPages: Math.ceil(count / parseInt(limit)) },
     });
   } catch (error) {
@@ -187,7 +141,6 @@ const getGlobalOrders = async (req, res) => {
   }
 };
 
-// PUT /api/admin/orders/:id/status  — update order status
 const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -204,9 +157,74 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+// ── ORDERS BY USER (for QR scan) ─────────────────────────────────────────────
+
+// GET /api/admin/orders/user/:userId
+const getOrdersByUser = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID.' });
+    }
+    const user = await User.findByPk(userId, { attributes: ['id', 'name', 'email', 'role'] });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+    const orders = await Order.findAll({
+      where: { user_id: userId },
+      include: [{ model: OrderItem, as: 'items', include: [{ model: Product, as: 'product', attributes: ['id', 'name', 'price', 'image_url'] }] }],
+      order: [['created_at', 'DESC']],
+      limit: 10,
+    });
+    return res.status(200).json({ success: true, data: { user, orders } });
+  } catch (error) {
+    console.error('Get orders by user error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error.' });
+  }
+};
+
+// ── PLATES SUMMARY ────────────────────────────────────────────────────────────
+
+// GET /api/admin/orders/plates
+const getPlatesSummary = async (req, res) => {
+  try {
+    const activeStatuses = ['pending', 'confirmed', 'preparing', 'ready'];
+    const orders = await Order.findAll({
+      where: { status: { [Op.in]: activeStatuses } },
+      include: [{ model: OrderItem, as: 'items', include: [{ model: Product, as: 'product', attributes: ['id', 'name', 'image_url', 'category'] }] }],
+    });
+
+    const plateMap = {};
+    for (const order of orders) {
+      for (const item of order.items) {
+        const key = item.product_id;
+        if (!plateMap[key]) {
+          plateMap[key] = {
+            product_id: key,
+            name: item.product?.name || 'Unknown',
+            image_url: item.product?.image_url || null,
+            category: item.product?.category || null,
+            total_plates: 0,
+          };
+        }
+        plateMap[key].total_plates += item.quantity;
+      }
+    }
+
+    const summary = Object.values(plateMap).sort((a, b) => b.total_plates - a.total_plates);
+    const totalPlates = summary.reduce((sum, p) => sum + p.total_plates, 0);
+
+    return res.status(200).json({
+      success: true,
+      data: { summary, totalPlates, activeOrderCount: orders.length },
+    });
+  } catch (error) {
+    console.error('Plates summary error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error.' });
+  }
+};
+
 // ── ADMIN PRODUCTS ─────────────────────────────────────────────────────────────
 
-// GET /api/admin/products  — all products including unavailable
 const getAdminProducts = async (req, res) => {
   try {
     const { search } = req.query;
@@ -219,4 +237,9 @@ const getAdminProducts = async (req, res) => {
   }
 };
 
-module.exports = { createStaff, getStaff, toggleStaff, updateStaff, deleteStaff, getDashboard, getGlobalOrders, updateOrderStatus, getAdminProducts };
+module.exports = {
+  createStaff, getStaff, toggleStaff, updateStaff, deleteStaff,
+  getDashboard, getGlobalOrders, updateOrderStatus,
+  getOrdersByUser, getPlatesSummary,
+  getAdminProducts,
+};

@@ -7,6 +7,7 @@ import 'home_screen.dart';
 import 'admin/admin_shell.dart';
 import 'admin/admin_register_screen.dart';
 import 'admin/admin_login_screen.dart';
+import 'staff/staff_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,8 +34,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.read<AuthProvider>();
     final success = await auth.login(email: _emailCtrl.text.trim(), password: _passwordCtrl.text);
     if (success && mounted) {
-      if (auth.isAdminOrStaff) {
+      if (auth.isAdmin) {
         Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const AdminShell()));
+      } else if (auth.isStaff) {
+        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const StaffShell()));
       } else {
         await context.read<CartProvider>().fetchCart(auth.token!);
         Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));

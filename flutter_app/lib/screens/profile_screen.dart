@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/cart_provider.dart';
@@ -90,6 +91,36 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 20),
+                  // QR Code card
+                  if (user != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8)],
+                      ),
+                      child: Column(
+                        children: [
+                          const Text('My Mess QR Code', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF2C3E50))),
+                          const SizedBox(height: 4),
+                          Text('Show this to staff when collecting your order', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                          const SizedBox(height: 16),
+                          QrImageView(
+                            data: '${user.id}',
+                            version: QrVersions.auto,
+                            size: 160,
+                            backgroundColor: Colors.white,
+                            eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF2C3E50)),
+                            dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFFFF6B35)),
+                          ),
+                          const SizedBox(height: 8),
+                          Text('ID: ${user.id}  ·  ${user.name}', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: 20),
                   // Info card
                   Container(
