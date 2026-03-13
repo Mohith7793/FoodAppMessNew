@@ -8,6 +8,7 @@ import 'admin/admin_shell.dart';
 import 'admin/admin_register_screen.dart';
 import 'admin/admin_login_screen.dart';
 import 'staff/staff_shell.dart';
+import 'staff/staff_login_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -125,16 +126,37 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Mess Owner links
+                // Role-based login links
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Row(
                     children: [
                       Expanded(
                         child: GestureDetector(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StaffLoginScreen())),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.teal.withOpacity(0.5)),
+                            ),
+                            child: const Column(
+                              children: [
+                                Icon(Icons.badge_outlined, color: Colors.teal, size: 22),
+                                SizedBox(height: 6),
+                                Text('Staff Login', style: TextStyle(color: Colors.teal, fontWeight: FontWeight.w700, fontSize: 12), textAlign: TextAlign.center),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: GestureDetector(
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminLoginScreen())),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(16),
@@ -144,18 +166,18 @@ class _LoginScreenState extends State<LoginScreen> {
                               children: [
                                 Icon(Icons.admin_panel_settings_outlined, color: Colors.white, size: 22),
                                 SizedBox(height: 6),
-                                Text('Admin Login', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13), textAlign: TextAlign.center),
+                                Text('Admin Login', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12), textAlign: TextAlign.center),
                               ],
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: GestureDetector(
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminRegisterScreen())),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(16),
@@ -165,7 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               children: [
                                 Icon(Icons.store_outlined, color: Colors.white, size: 22),
                                 SizedBox(height: 6),
-                                Text('Admin Register', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13), textAlign: TextAlign.center),
+                                Text('Admin Register', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12), textAlign: TextAlign.center),
                               ],
                             ),
                           ),
