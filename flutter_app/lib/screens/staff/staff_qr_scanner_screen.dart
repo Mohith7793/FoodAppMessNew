@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
@@ -29,6 +30,7 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     _cameraCtrl = MobileScannerController(
       detectionSpeed: DetectionSpeed.noDuplicates,
       returnImage: false,
+      formats: const [BarcodeFormat.qrCode],
     );
   }
 
@@ -54,7 +56,19 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     if (_processing) return;
     final raw = capture.barcodes.firstOrNull?.rawValue;
     if (raw == null || raw.isEmpty) return;
-    final userId = int.tryParse(raw.trim());
+
+    // Try plain integer first (profile QR code)
+    int? userId = int.tryParse(raw.trim());
+
+    // If not a plain int, try JSON (order QR code contains user_id)
+    if (userId == null) {
+      try {
+        final json = jsonDecode(raw) as Map<String, dynamic>;
+        final dynamic uid = json['user_id'];
+        if (uid != null) userId = int.tryParse(uid.toString());
+      } catch (_) {}
+    }
+
     if (userId == null) return;
 
     // Stop camera while processing to prevent duplicate scans
