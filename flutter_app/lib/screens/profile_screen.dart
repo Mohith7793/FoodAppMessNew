@@ -108,13 +108,17 @@ class ProfileScreen extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text('Show this to staff when collecting your order', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                           const SizedBox(height: 16),
-                          QrImageView(
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            color: Colors.white,
+                            child: QrImageView(
                             data: '${user.id}',
                             version: QrVersions.auto,
-                            size: 160,
+                            size: 180,
                             backgroundColor: Colors.white,
-                            eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF2C3E50)),
-                            dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFFFF6B35)),
+                            eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF1A1A2E)),
+                            dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFF1A1A2E)),
+                          ),
                           ),
                           const SizedBox(height: 8),
                           Text('ID: ${user.id}  ·  ${user.name}', style: TextStyle(fontSize: 12, color: Colors.grey[500])),

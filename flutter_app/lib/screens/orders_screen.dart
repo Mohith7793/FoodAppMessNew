@@ -93,6 +93,7 @@ Color _paymentStatusColor(String orderStatus) {
 
 String _buildQRData(Order order) {
   return jsonEncode({
+    'user_id': order.userId,
     'order_id': order.id,
     'payment_status': _paymentStatusLabel(order.status).toLowerCase(),
     'order_status': order.status,
