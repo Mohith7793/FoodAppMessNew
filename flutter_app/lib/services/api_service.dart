@@ -9,7 +9,7 @@ class ApiService {
   // 🤖 Android Emulator — uncomment this instead:
 =======
   // ✅ Physical device (WiFi) — investor demo:
-  static const String baseUrl = 'http://192.168.137.181:5001/api';
+  static const String baseUrl = 'http://10.179.80.213:5001/api';
   // 💻 Mac + iOS Simulator / Chrome:
   // static const String baseUrl = 'http://localhost:5001/api';
   // 🤖 Android Emulator:
