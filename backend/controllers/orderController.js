@@ -49,7 +49,7 @@ const createOrder = async (req, res) => {
 
     // Create order
     const order = await Order.create(
-      { user_id: req.user.id, total_price: total.toFixed(2), status: 'pending', notes },
+      { user_id: req.user.id, total_price: parseFloat(total.toFixed(2)), status: 'pending', notes },
       { transaction: t }
     );
 

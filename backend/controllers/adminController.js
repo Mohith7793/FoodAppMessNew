@@ -44,9 +44,15 @@ const getStaff = async (req, res) => {
   }
 };
 
-// MVP: is_active column not in DB yet, toggle is no-op
 const toggleStaff = async (req, res) => {
-  return res.status(200).json({ success: true, message: 'Toggle not available in MVP mode.' });
+  try {
+    const staff = await User.findOne({ where: { id: req.params.id, role: 'staff' } });
+    if (!staff) return res.status(404).json({ success: false, message: 'Staff member not found.' });
+    await staff.update({ is_active: !staff.is_active });
+    return res.status(200).json({ success: true, message: `Staff ${staff.is_active ? 'activated' : 'deactivated'}.`, data: { id: staff.id, is_active: staff.is_active } });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Internal server error.' });
+  }
 };
 
 const updateStaff = async (req, res) => {

@@ -21,7 +21,9 @@ class CartItem {
       cartId: json['cart_id'] as int,
       productId: json['product_id'] as int,
       quantity: json['quantity'] as int,
-      product: Product.fromJson(json['product'] as Map<String, dynamic>),
+      product: json['product'] != null
+          ? Product.fromJson(json['product'] as Map<String, dynamic>)
+          : Product(id: json['product_id'] as int, name: 'Unknown', description: '', price: 0, stock: 0, category: 'Other', isAvailable: false),
     );
   }
 
