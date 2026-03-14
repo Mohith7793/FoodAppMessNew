@@ -24,7 +24,7 @@ class Product {
       id: json['id'] as int,
       name: json['name'] as String,
       description: json['description'] as String? ?? '',
-      price: double.parse(json['price'].toString()),
+      price: double.parse((json['price'] ?? 0).toString()),
       imageUrl: json['image_url'] as String?,
       stock: json['stock'] as int? ?? 0,
       category: json['category'] as String? ?? 'Other',

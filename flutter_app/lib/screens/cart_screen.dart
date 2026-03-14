@@ -59,10 +59,7 @@ class CartScreen extends StatelessWidget {
             onPressed: () async {
               Navigator.pop(ctx);
               final token = context.read<AuthProvider>().token!;
-              await context.read<CartProvider>().removeItem(
-                    token: token,
-                    productId: -1, // clear all
-                  );
+              await context.read<CartProvider>().clearCart(token);
             },
             child: const Text('Clear All'),
           ),

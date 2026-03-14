@@ -44,9 +44,9 @@ router.get('/dashboard', authorizeAdminOrStaff, getDashboard);
 
 // ── Global Orders (admin + staff) ─────────────────────────────────────────────
 router.get('/orders', authorizeAdminOrStaff, getGlobalOrders);
-router.put('/orders/:id/status', authorizeAdminOrStaff, updateOrderStatus);
-router.get('/orders/user/:userId', authorizeAdminOrStaff, getOrdersByUser);
 router.get('/orders/plates', authorizeAdminOrStaff, getPlatesSummary);
+router.get('/orders/user/:userId', authorizeAdminOrStaff, getOrdersByUser);
+router.put('/orders/:id/status', authorizeAdminOrStaff, updateOrderStatus);
 
 // ── Admin Products (admin only, includes unavailable) ─────────────────────────
 router.get('/products', authorizeAdmin, getAdminProducts);

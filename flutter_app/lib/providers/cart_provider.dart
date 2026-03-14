@@ -114,6 +114,20 @@ class CartProvider extends ChangeNotifier {
     );
   }
 
+  Future<void> clearCart(String token) async {
+    _loading = true;
+    notifyListeners();
+    try {
+      await ApiService.clearCart(token);
+      _cart = null;
+    } catch (e) {
+      _error = 'Failed to clear cart.';
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
   void clearLocalCart() {
     _cart = null;
     notifyListeners();
