@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 class ApiService {
   // ✅ Mac + iOS Simulator / Chrome:
   // ✅ Physical device (WiFi) — investor demo:
-  static const String baseUrl = 'http://10.1.107.243:5001/api';
+  static const String baseUrl = 'http://192.168.137.181:5001/api';
   // 💻 Mac + iOS Simulator / Chrome:
   // static const String baseUrl = 'http://localhost:5001/api';
   // 🤖 Android Emulator:
