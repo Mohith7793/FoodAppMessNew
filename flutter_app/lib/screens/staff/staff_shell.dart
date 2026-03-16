@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import 'staff_qr_scanner_screen.dart';
+// Conditional import: on web, use the web-safe scanner (no mobile_scanner dep).
+// On mobile/desktop, use the real camera scanner.
+import 'staff_qr_scanner_screen.dart'
+    if (dart.library.html) 'staff_qr_scanner_screen_web.dart';
 import 'staff_orders_screen.dart';
 import 'staff_plates_screen.dart';
 
