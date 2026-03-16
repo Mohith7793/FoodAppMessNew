@@ -22,7 +22,7 @@ class AppConfig {
   static const String _prefPortKey = 'server_port';
 
   /// Fallback WiFi IP for Android when no custom host has been saved yet.
-  static const String androidDefaultHost = '10.36.141.213';
+  static const String androidDefaultHost = '10.253.56.213';
   static const int defaultPort = 5001;
 
   // Runtime-mutable values (loaded from SharedPreferences at startup)
