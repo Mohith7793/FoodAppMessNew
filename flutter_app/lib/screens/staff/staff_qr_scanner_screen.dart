@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -152,6 +153,55 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     );
   }
 
+  /// Pick an image from gallery/files and decode a QR code from it.
+  /// Works on iOS Simulator and macOS where the camera is unavailable.
+  Future<void> _scanFromImage() async {
+    if (_processing) return;
+    final picker = ImagePicker();
+    final XFile? file = await picker.pickImage(source: ImageSource.gallery);
+    if (file == null) return; // user cancelled
+
+    setState(() => _processing = true);
+    try {
+      final capture = await _cameraCtrl.analyzeImage(file.path);
+      if (!mounted) return;
+      if (capture == null || capture.barcodes.isEmpty) {
+        _showErrorDialog(
+          title: 'No QR Found',
+          message: 'No QR code was found in the selected image.\n\nMake sure the image clearly shows the student\'s order QR code.',
+        );
+        return;
+      }
+
+      final raw = capture.barcodes.firstOrNull?.rawValue ?? '';
+      int? userId = int.tryParse(raw.trim());
+      if (userId == null) {
+        try {
+          final json = jsonDecode(raw) as Map<String, dynamic>;
+          final dynamic uid = json['user_id'];
+          if (uid != null) userId = int.tryParse(uid.toString());
+        } catch (_) {}
+      }
+
+      if (userId == null) {
+        _showErrorDialog(
+          title: 'Invalid QR Code',
+          message: 'The QR code in the image is not a student order code.\n\nScanned: ${raw.length > 80 ? raw.substring(0, 80) + '...' : raw}',
+        );
+        return;
+      }
+
+      setState(() => _processing = false); // reset before fetchAndShow which sets it again
+      await _fetchAndShowOrders(userId);
+    } catch (e) {
+      if (mounted) {
+        _showErrorDialog(title: 'Scan Error', message: 'Failed to analyse image.\n\nDetails: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _processing = false);
+    }
+  }
+
   Future<void> _lookUpManual() async {
     final id = int.tryParse(_manualCtrl.text.trim());
     if (id == null) {
@@ -265,12 +315,28 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
             ),
           ),
 
-          // ── Manual entry ───────────────────────────────────────
+          // ── Bottom actions: image scan + manual entry ──────────
           Container(
             color: _kCard,
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
             child: Column(
               children: [
+                // "Scan from Image" — works on iOS Simulator / Mac where camera is unavailable
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: _processing ? null : _scanFromImage,
+                    icon: const Icon(Icons.image_search, size: 18),
+                    label: const Text('Scan QR from Photo / Screenshot'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _kOrange,
+                      side: const BorderSide(color: _kOrange, width: 1.5),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
                 Row(children: [
                   const Expanded(child: Divider(color: Colors.white12)),
                   Padding(
