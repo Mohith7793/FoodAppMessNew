@@ -12,7 +12,7 @@
 /// ─────────────────────────────────────────────────────────────────────────────
 class AppConfig {
   /// Your Mac's current WiFi IP address (update when network changes)
-  static const String serverHost = '192.168.1.100'; // <-- CHANGE THIS
+  static const String serverHost = '10.36.141.213';
 
   static const int serverPort = 5001;
 
