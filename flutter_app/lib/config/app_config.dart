@@ -2,41 +2,69 @@
 /// SERVER CONFIGURATION
 /// ─────────────────────────────────────────────────────────────────────────────
 ///
-/// [androidHost]  — your Mac's WiFi IP (used by Android physical device).
-///   Find it:  ifconfig en0 | grep "inet " | awk '{print $2}'
+/// The server host is configurable at runtime via a settings dialog on the
+/// login screen (tap the ⚙ icon). The value is saved in SharedPreferences so
+/// it persists across app restarts.
 ///
-/// [iosSimulatorHost] — always 'localhost' for the iOS Simulator, which runs
-///   on the Mac itself and cannot reach the Mac via its own WiFi IP.
+/// Default fallbacks (used when no custom host has been saved):
+///   • Android device   → androidDefaultHost  (your Mac's WiFi IP)
+///   • iOS Simulator    → localhost
 ///
-/// • Android device   → androidHost
-/// • iOS Simulator    → localhost (iosSimulatorHost)
-/// • Real iPhone/iPad → change iosSimulatorHost to the same WiFi IP as Android
+/// How to find your Mac's WiFi IP:
+///   • Mac Terminal: ifconfig en0 | grep "inet " | awk '{print $2}'
+///   • Windows cmd:  ipconfig | findstr "IPv4"
 /// ─────────────────────────────────────────────────────────────────────────────
 import 'dart:io' show Platform;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AppConfig {
-  /// Mac's current WiFi IP — used by Android devices on the same network.
-  static const String androidHost = '10.36.141.213';
+  static const String _prefKey = 'server_host';
+  static const String _prefPortKey = 'server_port';
 
-  /// iOS Simulator runs ON the Mac, so it reaches the backend via localhost.
-  /// If testing on a real iPhone/iPad, change this to the same WiFi IP above.
-  static const String iosSimulatorHost = 'localhost';
+  /// Fallback WiFi IP for Android when no custom host has been saved yet.
+  static const String androidDefaultHost = '10.36.141.213';
+  static const int defaultPort = 5001;
 
-  static const int serverPort = 5001;
+  // Runtime-mutable values (loaded from SharedPreferences at startup)
+  static String? _customHost;
+  static int? _customPort;
 
-  /// Automatically picks the right host based on the running platform.
-  static String get serverHost {
-    if (Platform.isAndroid) return androidHost;
-    return iosSimulatorHost; // iOS Simulator or real device
+  /// Call once in main() before runApp().
+  static Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    _customHost = prefs.getString(_prefKey);
+    _customPort = prefs.getInt(_prefPortKey);
   }
 
-  /// Full base URL for API calls
-  static String get apiBaseUrl => 'http://$serverHost:$serverPort/api';
+  /// Persist a new host/port chosen by the user.
+  static Future<void> save({required String host, required int port}) async {
+    _customHost = host.trim();
+    _customPort = port;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefKey, _customHost!);
+    await prefs.setInt(_prefPortKey, _customPort!);
+  }
 
-  /// Base URL for serving uploaded images
+  /// Clear saved config (reverts to platform defaults).
+  static Future<void> reset() async {
+    _customHost = null;
+    _customPort = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefKey);
+    await prefs.remove(_prefPortKey);
+  }
+
+  static String get serverHost {
+    if (_customHost != null && _customHost!.isNotEmpty) return _customHost!;
+    if (Platform.isAndroid) return androidDefaultHost;
+    return 'localhost'; // iOS Simulator or macOS
+  }
+
+  static int get serverPort => _customPort ?? defaultPort;
+
+  static String get apiBaseUrl => 'http://$serverHost:$serverPort/api';
   static String get mediaBaseUrl => 'http://$serverHost:$serverPort';
 
-  /// Resolve a potentially relative image path to a full URL.
   static String resolveImageUrl(String? rawUrl) {
     if (rawUrl == null || rawUrl.isEmpty) return '';
     if (rawUrl.startsWith('http')) return rawUrl;

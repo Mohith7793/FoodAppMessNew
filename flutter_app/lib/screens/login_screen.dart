@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../config/app_config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import 'register_screen.dart';
@@ -23,11 +24,18 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordCtrl = TextEditingController();
   bool _obscurePassword = true;
 
+  // Shown below the login card so user knows which server is targeted
+  String get _serverLabel => '${AppConfig.serverHost}:${AppConfig.serverPort}';
+
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
+  }
+
+  void _showServerSettings() {
+    showDialog(context: context, builder: (_) => _ServerSettingsDialog(onSaved: () => setState(() {})));
   }
 
   Future<void> _handleLogin() async {
@@ -125,7 +133,31 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
+                // Server indicator + settings button
+                GestureDetector(
+                  onTap: _showServerSettings,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white30),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.dns_outlined, color: Colors.white70, size: 16),
+                        const SizedBox(width: 8),
+                        Text('Server: $_serverLabel', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.edit_outlined, color: Colors.white54, size: 14),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 // Role-based login links
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -234,6 +266,119 @@ class _ErrorBanner extends StatelessWidget {
         Expanded(child: Text(message, style: const TextStyle(color: Colors.red, fontSize: 13))),
         GestureDetector(onTap: onDismiss, child: const Icon(Icons.close, color: Colors.red, size: 16)),
       ]),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Server Settings Dialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ServerSettingsDialog extends StatefulWidget {
+  final VoidCallback onSaved;
+  const _ServerSettingsDialog({required this.onSaved});
+
+  @override
+  State<_ServerSettingsDialog> createState() => _ServerSettingsDialogState();
+}
+
+class _ServerSettingsDialogState extends State<_ServerSettingsDialog> {
+  late final TextEditingController _hostCtrl;
+  late final TextEditingController _portCtrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hostCtrl = TextEditingController(text: AppConfig.serverHost);
+    _portCtrl = TextEditingController(text: AppConfig.serverPort.toString());
+  }
+
+  @override
+  void dispose() {
+    _hostCtrl.dispose();
+    _portCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final host = _hostCtrl.text.trim();
+    final port = int.tryParse(_portCtrl.text.trim());
+    if (host.isEmpty || port == null || port <= 0 || port > 65535) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid host and port (1–65535).'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    await AppConfig.save(host: host, port: port);
+    setState(() => _saving = false);
+    widget.onSaved();
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _reset() async {
+    await AppConfig.reset();
+    widget.onSaved();
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.dns_outlined, color: Color(0xFFFF6B35)),
+          SizedBox(width: 8),
+          Text('Server Settings'),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Enter the IP address of the machine running the backend server. '
+            'All devices must use the same IP.',
+            style: TextStyle(fontSize: 13, color: Colors.black54),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _hostCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Server Host / IP',
+              hintText: 'e.g. 192.168.1.100 or localhost',
+              prefixIcon: Icon(Icons.computer_outlined),
+            ),
+            keyboardType: TextInputType.url,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _portCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Port',
+              hintText: '5001',
+              prefixIcon: Icon(Icons.numbers_outlined),
+            ),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Current URL: http://${AppConfig.serverHost}:${AppConfig.serverPort}/api',
+            style: const TextStyle(fontSize: 11, color: Colors.black38),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: _reset, child: const Text('Reset to Default', style: TextStyle(color: Colors.grey))),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        ElevatedButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Save'),
+        ),
+      ],
     );
   }
 }

@@ -4,9 +4,12 @@ import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 
 class ApiService {
-  // ── Base URL comes from AppConfig (lib/config/app_config.dart)
-  // Update AppConfig.serverHost to your Mac's WiFi IP to fix connection issues.
+  // ── Base URL comes from AppConfig (lib/config/app_config.dart).
+  // To change the server IP at runtime, tap the server bar on the login screen.
   static String get baseUrl => AppConfig.apiBaseUrl;
+
+  // All requests fail fast after 10 s instead of hanging indefinitely.
+  static const Duration _timeout = Duration(seconds: 10);
 
   static Map<String, String> _headers({String? token, bool json = true}) {
     final headers = <String, String>{};
@@ -18,17 +21,17 @@ class ApiService {
   // ── AUTH ───────────────────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> register({required String name, required String email, required String password}) async {
-    final res = await http.post(Uri.parse('$baseUrl/auth/register'), headers: _headers(), body: jsonEncode({'name': name, 'email': email, 'password': password}));
+    final res = await http.post(Uri.parse('$baseUrl/auth/register'), headers: _headers(), body: jsonEncode({'name': name, 'email': email, 'password': password})).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> registerAdmin({required String name, required String email, required String password, required String adminSecret}) async {
-    final res = await http.post(Uri.parse('$baseUrl/auth/register-admin'), headers: _headers(), body: jsonEncode({'name': name, 'email': email, 'password': password, 'admin_secret': adminSecret}));
+    final res = await http.post(Uri.parse('$baseUrl/auth/register-admin'), headers: _headers(), body: jsonEncode({'name': name, 'email': email, 'password': password, 'admin_secret': adminSecret})).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> login({required String email, required String password}) async {
-    final res = await http.post(Uri.parse('$baseUrl/auth/login'), headers: _headers(), body: jsonEncode({'email': email, 'password': password}));
+    final res = await http.post(Uri.parse('$baseUrl/auth/login'), headers: _headers(), body: jsonEncode({'email': email, 'password': password})).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
@@ -41,53 +44,53 @@ class ApiService {
       'page': page.toString(),
       'limit': '20',
     });
-    final res = await http.get(uri, headers: _headers());
+    final res = await http.get(uri, headers: _headers()).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   // ── CART ───────────────────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> getCart(String token) async {
-    final res = await http.get(Uri.parse('$baseUrl/cart'), headers: _headers(token: token));
+    final res = await http.get(Uri.parse('$baseUrl/cart'), headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> addToCart({required String token, required int productId, required int quantity}) async {
-    final res = await http.post(Uri.parse('$baseUrl/cart/add'), headers: _headers(token: token), body: jsonEncode({'product_id': productId, 'quantity': quantity}));
+    final res = await http.post(Uri.parse('$baseUrl/cart/add'), headers: _headers(token: token), body: jsonEncode({'product_id': productId, 'quantity': quantity})).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> updateCartItem({required String token, required int productId, required int quantity}) async {
-    final res = await http.put(Uri.parse('$baseUrl/cart/update'), headers: _headers(token: token), body: jsonEncode({'product_id': productId, 'quantity': quantity}));
+    final res = await http.put(Uri.parse('$baseUrl/cart/update'), headers: _headers(token: token), body: jsonEncode({'product_id': productId, 'quantity': quantity})).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> removeFromCart({required String token, required int productId}) async {
-    final res = await http.delete(Uri.parse('$baseUrl/cart/remove'), headers: _headers(token: token), body: jsonEncode({'product_id': productId}));
+    final res = await http.delete(Uri.parse('$baseUrl/cart/remove'), headers: _headers(token: token), body: jsonEncode({'product_id': productId})).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> clearCart(String token) async {
-    final res = await http.delete(Uri.parse('$baseUrl/cart/clear'), headers: _headers(token: token));
+    final res = await http.delete(Uri.parse('$baseUrl/cart/clear'), headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   // ── ORDERS (customer) ──────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> createOrder({required String token, String? notes}) async {
-    final res = await http.post(Uri.parse('$baseUrl/orders/create'), headers: _headers(token: token), body: jsonEncode({'notes': notes}));
+    final res = await http.post(Uri.parse('$baseUrl/orders/create'), headers: _headers(token: token), body: jsonEncode({'notes': notes})).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> getOrders(String token) async {
-    final res = await http.get(Uri.parse('$baseUrl/orders'), headers: _headers(token: token));
+    final res = await http.get(Uri.parse('$baseUrl/orders'), headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   // ── ADMIN: DASHBOARD ───────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> getDashboard(String token) async {
-    final res = await http.get(Uri.parse('$baseUrl/admin/dashboard'), headers: _headers(token: token));
+    final res = await http.get(Uri.parse('$baseUrl/admin/dashboard'), headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
@@ -97,22 +100,22 @@ class ApiService {
     final uri = Uri.parse('$baseUrl/admin/products').replace(queryParameters: {
       if (search != null && search.isNotEmpty) 'search': search,
     });
-    final res = await http.get(uri, headers: _headers(token: token));
+    final res = await http.get(uri, headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> createProduct(String token, Map<String, dynamic> data) async {
-    final res = await http.post(Uri.parse('$baseUrl/products'), headers: _headers(token: token), body: jsonEncode(data));
+    final res = await http.post(Uri.parse('$baseUrl/products'), headers: _headers(token: token), body: jsonEncode(data)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> updateProduct(String token, int id, Map<String, dynamic> data) async {
-    final res = await http.put(Uri.parse('$baseUrl/products/$id'), headers: _headers(token: token), body: jsonEncode(data));
+    final res = await http.put(Uri.parse('$baseUrl/products/$id'), headers: _headers(token: token), body: jsonEncode(data)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> deleteProduct(String token, int id) async {
-    final res = await http.delete(Uri.parse('$baseUrl/products/$id'), headers: _headers(token: token));
+    final res = await http.delete(Uri.parse('$baseUrl/products/$id'), headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
@@ -120,7 +123,7 @@ class ApiService {
     final req = http.MultipartRequest('POST', Uri.parse('$baseUrl/admin/products/$productId/image'));
     req.headers['Authorization'] = 'Bearer $token';
     req.files.add(http.MultipartFile.fromBytes('image', imageBytes, filename: fileName));
-    final streamed = await req.send();
+    final streamed = await req.send().timeout(_timeout);
     final res = await http.Response.fromStream(streamed);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -128,22 +131,22 @@ class ApiService {
   // ── ADMIN: STAFF ───────────────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> getStaff(String token) async {
-    final res = await http.get(Uri.parse('$baseUrl/admin/staff'), headers: _headers(token: token));
+    final res = await http.get(Uri.parse('$baseUrl/admin/staff'), headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> createStaff(String token, {required String name, required String email, required String password}) async {
-    final res = await http.post(Uri.parse('$baseUrl/admin/staff'), headers: _headers(token: token), body: jsonEncode({'name': name, 'email': email, 'password': password}));
+    final res = await http.post(Uri.parse('$baseUrl/admin/staff'), headers: _headers(token: token), body: jsonEncode({'name': name, 'email': email, 'password': password})).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> toggleStaff(String token, int staffId) async {
-    final res = await http.put(Uri.parse('$baseUrl/admin/staff/$staffId/toggle'), headers: _headers(token: token));
+    final res = await http.put(Uri.parse('$baseUrl/admin/staff/$staffId/toggle'), headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> deleteStaff(String token, int staffId) async {
-    final res = await http.delete(Uri.parse('$baseUrl/admin/staff/$staffId'), headers: _headers(token: token));
+    final res = await http.delete(Uri.parse('$baseUrl/admin/staff/$staffId'), headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
@@ -155,26 +158,26 @@ class ApiService {
       'page': page.toString(),
       'limit': '30',
     });
-    final res = await http.get(uri, headers: _headers(token: token));
+    final res = await http.get(uri, headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> updateOrderStatus(String token, int orderId, String status) async {
-    final res = await http.put(Uri.parse('$baseUrl/admin/orders/$orderId/status'), headers: _headers(token: token), body: jsonEncode({'status': status}));
+    final res = await http.put(Uri.parse('$baseUrl/admin/orders/$orderId/status'), headers: _headers(token: token), body: jsonEncode({'status': status})).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   // ── STAFF: QR SCAN — orders for a specific student ─────────────────────────
 
   static Future<Map<String, dynamic>> getOrdersByUser(String token, int userId) async {
-    final res = await http.get(Uri.parse('$baseUrl/admin/orders/user/$userId'), headers: _headers(token: token));
+    final res = await http.get(Uri.parse('$baseUrl/admin/orders/user/$userId'), headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
   // ── STAFF: PLATES SUMMARY ──────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> getPlatesSummary(String token) async {
-    final res = await http.get(Uri.parse('$baseUrl/admin/orders/plates'), headers: _headers(token: token));
+    final res = await http.get(Uri.parse('$baseUrl/admin/orders/plates'), headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 }
