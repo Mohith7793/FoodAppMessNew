@@ -1,15 +1,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import '../config/app_config.dart';
 
 class ApiService {
-  // ✅ Mac + iOS Simulator / Chrome:
-  // ✅ Physical device (WiFi) — investor demo:
-  static const String baseUrl = 'http://10.179.80.213:5001/api';
-  // 💻 Mac + iOS Simulator / Chrome:
-  // static const String baseUrl = 'http://localhost:5001/api';
-  // 🤖 Android Emulator:
-  // static const String baseUrl = 'http://10.0.2.2:5001/api';
+  // ── Base URL comes from AppConfig (lib/config/app_config.dart)
+  // Update AppConfig.serverHost to your Mac's WiFi IP to fix connection issues.
+  static String get baseUrl => AppConfig.apiBaseUrl;
 
   static Map<String, String> _headers({String? token, bool json = true}) {
     final headers = <String, String>{};

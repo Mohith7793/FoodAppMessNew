@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../models/product_model.dart';
+import '../../config/app_config.dart';
 
 class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({super.key});
@@ -169,7 +170,7 @@ class _ProductTile extends StatelessWidget {
               width: 90, height: 90,
               child: product.imageUrl != null
                   ? Image.network(
-                      product.imageUrl!.startsWith('/uploads') ? 'http://10.1.107.243:5001${product.imageUrl}' : product.imageUrl!,
+                      AppConfig.resolveImageUrl(product.imageUrl),
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => _Placeholder(),
                     )
@@ -356,7 +357,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                       ? ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.memory(_imageBytes!, fit: BoxFit.cover))
                       : (_existingImageUrl != null
                           ? ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.network(
-                              _existingImageUrl!.startsWith('/uploads') ? 'http://10.1.107.243:5001$_existingImageUrl' : _existingImageUrl!,
+                              AppConfig.resolveImageUrl(_existingImageUrl),
                               fit: BoxFit.cover, errorBuilder: (_, __, ___) => _imagePlaceholder()))
                           : _imagePlaceholder()),
                 ),

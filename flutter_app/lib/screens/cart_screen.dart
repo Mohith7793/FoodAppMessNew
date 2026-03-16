@@ -5,6 +5,7 @@ import '../providers/cart_provider.dart';
 import '../providers/order_provider.dart';
 import '../models/cart_model.dart';
 import 'order_success_screen.dart';
+import '../config/app_config.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -98,7 +99,7 @@ class _CartItemTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               child: item.product.imageUrl != null
                   ? Image.network(
-                      item.product.imageUrl!,
+                      AppConfig.resolveImageUrl(item.product.imageUrl),
                       width: 72,
                       height: 72,
                       fit: BoxFit.cover,
