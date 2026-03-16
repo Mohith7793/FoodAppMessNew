@@ -22,6 +22,7 @@ class OrderSuccessScreen extends StatelessWidget {
 
   String get _qrData {
     return jsonEncode({
+      'user_id': order.userId,
       'order_id': order.id,
       'payment_status': _paymentStatus,
       'order_status': order.status,
