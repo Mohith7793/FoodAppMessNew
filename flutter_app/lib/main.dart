@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'config/app_config.dart';
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/cart_provider.dart';
@@ -9,7 +10,9 @@ import 'screens/home_screen.dart';
 import 'screens/admin/admin_shell.dart';
 import 'screens/staff/staff_shell.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppConfig.load(); // load saved server host/port from SharedPreferences
   runApp(const FoodMessApp());
 }
 

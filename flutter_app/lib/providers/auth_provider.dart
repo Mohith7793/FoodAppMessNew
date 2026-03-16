@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/app_config.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
 
@@ -39,7 +40,8 @@ class AuthProvider extends ChangeNotifier {
       _error = res['message'] as String? ?? 'Registration failed.';
       return false;
     } catch (e) {
-      _error = 'Connection error. Check your network.'; return false;
+      _error = 'Cannot reach server at ${AppConfig.serverHost}:${AppConfig.serverPort}. '
+            'Tap the server bar on the login screen to update the IP.'; return false;
     } finally { _loading = false; notifyListeners(); }
   }
 
@@ -51,7 +53,8 @@ class AuthProvider extends ChangeNotifier {
       _error = res['message'] as String? ?? 'Registration failed.';
       return false;
     } catch (e) {
-      _error = 'Connection error. Check your network.'; return false;
+      _error = 'Cannot reach server at ${AppConfig.serverHost}:${AppConfig.serverPort}. '
+            'Tap the server bar on the login screen to update the IP.'; return false;
     } finally { _loading = false; notifyListeners(); }
   }
 
@@ -63,7 +66,8 @@ class AuthProvider extends ChangeNotifier {
       _error = res['message'] as String? ?? 'Login failed.';
       return false;
     } catch (e) {
-      _error = 'Connection error. Check your network.'; return false;
+      _error = 'Cannot reach server at ${AppConfig.serverHost}:${AppConfig.serverPort}. '
+            'Tap the server bar on the login screen to update the IP.'; return false;
     } finally { _loading = false; notifyListeners(); }
   }
 
