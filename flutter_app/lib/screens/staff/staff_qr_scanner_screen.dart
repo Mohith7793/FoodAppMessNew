@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -22,7 +23,7 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
 
   late final MobileScannerController _cameraCtrl;
   bool _processing = false;
-  String? _lastScannedRaw; // track last scan to show feedback
+  String? _lastScannedRaw;
   final _manualCtrl = TextEditingController();
 
   @override
@@ -38,8 +39,11 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // App lifecycle is not meaningful on web — skip to avoid errors
+    if (kIsWeb) return;
     if (!_cameraCtrl.value.isInitialized) return;
-    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
       _cameraCtrl.stop();
     } else if (state == AppLifecycleState.resumed) {
       _cameraCtrl.start();
@@ -59,10 +63,8 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     final raw = capture.barcodes.firstOrNull?.rawValue;
     if (raw == null || raw.isEmpty) return;
 
-    // Try plain integer first (profile QR code)
     int? userId = int.tryParse(raw.trim());
 
-    // If not a plain int, try JSON (order QR code contains user_id)
     if (userId == null) {
       try {
         final json = jsonDecode(raw) as Map<String, dynamic>;
@@ -72,12 +74,12 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     }
 
     if (userId == null) {
-      // QR detected but not a valid student code — show feedback
       if (mounted) {
         setState(() => _lastScannedRaw = raw);
         _showErrorDialog(
           title: 'Invalid QR Code',
-          message: 'This QR code is not a student order code.\n\nScanned: ${raw.length > 80 ? raw.substring(0, 80) + '...' : raw}',
+          message:
+              'This QR code is not a student order code.\n\nScanned: ${raw.length > 80 ? '${raw.substring(0, 80)}...' : raw}',
         );
       }
       return;
@@ -105,7 +107,8 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
       if (mounted) {
         _showErrorDialog(
           title: 'Connection Error',
-          message: 'Could not reach the server.\n\nMake sure:\n• Backend is running on your Mac\n• Both devices are on the same WiFi\n• IP in AppConfig is correct\n\nDetails: $e',
+          message:
+              'Could not reach the server.\n\nMake sure:\n• Backend is running\n• Device/browser can reach the server IP\n• IP in settings is correct\n\nDetails: $e',
         );
       }
     } finally {
@@ -123,13 +126,20 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
         title: Row(children: [
           const Icon(Icons.error_outline, color: Colors.redAccent, size: 22),
           const SizedBox(width: 8),
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+          Text(title,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800)),
         ]),
-        content: Text(message, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        content: Text(message,
+            style: const TextStyle(color: Colors.white70, fontSize: 13)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: _kOrange, fontWeight: FontWeight.w700)),
+            child: const Text('OK',
+                style:
+                    TextStyle(color: _kOrange, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -144,7 +154,8 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: _kCard,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => _StudentOrdersSheet(
         user: user,
         orders: orders,
@@ -153,13 +164,12 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     );
   }
 
-  /// Pick an image from gallery/files and decode a QR code from it.
-  /// Works on iOS Simulator and macOS where the camera is unavailable.
+  /// Pick an image (gallery on mobile, file picker on web/macOS) and decode QR.
   Future<void> _scanFromImage() async {
     if (_processing) return;
     final picker = ImagePicker();
     final XFile? file = await picker.pickImage(source: ImageSource.gallery);
-    if (file == null) return; // user cancelled
+    if (file == null) return;
 
     setState(() => _processing = true);
     try {
@@ -168,7 +178,8 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
       if (capture == null || capture.barcodes.isEmpty) {
         _showErrorDialog(
           title: 'No QR Found',
-          message: 'No QR code was found in the selected image.\n\nMake sure the image clearly shows the student\'s order QR code.',
+          message:
+              'No QR code was found in the selected image.\n\nMake sure the image clearly shows the student\'s order QR code.',
         );
         return;
       }
@@ -186,16 +197,19 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
       if (userId == null) {
         _showErrorDialog(
           title: 'Invalid QR Code',
-          message: 'The QR code in the image is not a student order code.\n\nScanned: ${raw.length > 80 ? raw.substring(0, 80) + '...' : raw}',
+          message:
+              'The QR code in the image is not a student order code.\n\nScanned: ${raw.length > 80 ? '${raw.substring(0, 80)}...' : raw}',
         );
         return;
       }
 
-      setState(() => _processing = false); // reset before fetchAndShow which sets it again
+      setState(() => _processing = false);
       await _fetchAndShowOrders(userId);
     } catch (e) {
       if (mounted) {
-        _showErrorDialog(title: 'Scan Error', message: 'Failed to analyse image.\n\nDetails: $e');
+        _showErrorDialog(
+            title: 'Scan Error',
+            message: 'Failed to analyse image.\n\nDetails: $e');
       }
     } finally {
       if (mounted) setState(() => _processing = false);
@@ -205,7 +219,9 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
   Future<void> _lookUpManual() async {
     final id = int.tryParse(_manualCtrl.text.trim());
     if (id == null) {
-      _showErrorDialog(title: 'Invalid Input', message: 'Please enter a valid numeric student ID.');
+      _showErrorDialog(
+          title: 'Invalid Input',
+          message: 'Please enter a valid numeric student ID.');
       return;
     }
     _manualCtrl.clear();
@@ -221,7 +237,7 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
       backgroundColor: _kDark,
       body: Column(
         children: [
-          // ── Camera scanner ─────────────────────────────────────
+          // ── Camera scanner ──────────────────────────────────────
           Expanded(
             flex: 3,
             child: Stack(
@@ -232,31 +248,43 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
                   errorBuilder: (ctx, error, child) => Container(
                     color: _kDark,
                     child: Center(
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.camera_alt_outlined, color: Colors.white38, size: 56),
-                        const SizedBox(height: 12),
-                        const Text('Camera unavailable', style: TextStyle(color: Colors.white54, fontSize: 15)),
-                        const SizedBox(height: 6),
-                        Text(error.errorCode.name, style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Use manual entry below',
-                          style: const TextStyle(color: _kOrange, fontSize: 13, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => _cameraCtrl.start(),
-                          style: ElevatedButton.styleFrom(backgroundColor: _kOrange),
-                          child: const Text('Retry Camera'),
-                        ),
-                      ]),
+                      child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.camera_alt_outlined,
+                                color: Colors.white38, size: 56),
+                            const SizedBox(height: 12),
+                            const Text('Camera unavailable',
+                                style: TextStyle(
+                                    color: Colors.white54, fontSize: 15)),
+                            const SizedBox(height: 6),
+                            Text(error.errorCode.name,
+                                style: const TextStyle(
+                                    color: Colors.white38, fontSize: 12)),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Use image scan or manual entry below',
+                              style: TextStyle(
+                                  color: _kOrange,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _cameraCtrl.start(),
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: _kOrange),
+                              child: const Text('Retry Camera'),
+                            ),
+                          ]),
                     ),
                   ),
                 ),
                 // Scan overlay frame
                 Center(
                   child: Container(
-                    width: 220, height: 220,
+                    width: 220,
+                    height: 220,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: _kOrange, width: 3),
@@ -274,65 +302,92 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
                   Container(
                     color: Colors.black54,
                     child: const Center(
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        CircularProgressIndicator(color: Color(0xFFFF6B35)),
-                        SizedBox(height: 12),
-                        Text('Looking up order...', style: TextStyle(color: Colors.white70)),
-                      ]),
+                      child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(
+                                color: Color(0xFFFF6B35)),
+                            SizedBox(height: 12),
+                            Text('Looking up order...',
+                                style: TextStyle(color: Colors.white70)),
+                          ]),
                     ),
                   ),
                 // Top hint
                 Positioned(
-                  top: 16, left: 0, right: 0,
+                  top: 16,
+                  left: 0,
+                  right: 0,
                   child: Center(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
-                      child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.qr_code_scanner, color: Colors.white70, size: 16),
-                        SizedBox(width: 6),
-                        Text('Point at student\'s QR code', style: TextStyle(color: Colors.white, fontSize: 13)),
-                      ]),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(20)),
+                      child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.qr_code_scanner,
+                                color: Colors.white70, size: 16),
+                            const SizedBox(width: 6),
+                            Text(
+                              kIsWeb
+                                  ? 'Camera scan · or use image/manual below'
+                                  : 'Point at student\'s QR code',
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 13),
+                            ),
+                          ]),
                     ),
                   ),
                 ),
-                // Torch toggle
-                Positioned(
-                  top: 16, right: 16,
-                  child: ValueListenableBuilder(
-                    valueListenable: _cameraCtrl,
-                    builder: (_, state, __) => IconButton(
-                      icon: Icon(
-                        state.torchState == TorchState.on ? Icons.flash_on : Icons.flash_off,
-                        color: state.torchState == TorchState.on ? _kOrange : Colors.white54,
-                        size: 28,
+                // Torch toggle — only available on real mobile cameras
+                if (!kIsWeb)
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: ValueListenableBuilder(
+                      valueListenable: _cameraCtrl,
+                      builder: (_, state, __) => IconButton(
+                        icon: Icon(
+                          state.torchState == TorchState.on
+                              ? Icons.flash_on
+                              : Icons.flash_off,
+                          color: state.torchState == TorchState.on
+                              ? _kOrange
+                              : Colors.white54,
+                          size: 28,
+                        ),
+                        onPressed: () => _cameraCtrl.toggleTorch(),
                       ),
-                      onPressed: () => _cameraCtrl.toggleTorch(),
                     ),
                   ),
-                ),
               ],
             ),
           ),
 
-          // ── Bottom actions: image scan + manual entry ──────────
+          // ── Bottom actions: image scan + manual entry ───────────
           Container(
             color: _kCard,
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
             child: Column(
               children: [
-                // "Scan from Image" — works on iOS Simulator / Mac where camera is unavailable
+                // "Scan from Image" — works everywhere (file picker on web/macOS)
                 SizedBox(
                   width: double.infinity,
                   height: 44,
                   child: OutlinedButton.icon(
                     onPressed: _processing ? null : _scanFromImage,
                     icon: const Icon(Icons.image_search, size: 18),
-                    label: const Text('Scan QR from Photo / Screenshot'),
+                    label: Text(kIsWeb
+                        ? 'Upload QR Image to Scan'
+                        : 'Scan QR from Photo / Screenshot'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _kOrange,
                       side: const BorderSide(color: _kOrange, width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                 ),
@@ -341,7 +396,9 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
                   const Expanded(child: Divider(color: Colors.white12)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text('or enter student ID manually', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                    child: Text('or enter student ID manually',
+                        style: TextStyle(
+                            color: Colors.white38, fontSize: 12)),
                   ),
                   const Expanded(child: Divider(color: Colors.white12)),
                 ]),
@@ -354,15 +411,21 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
                         keyboardType: TextInputType.number,
                         style: const TextStyle(color: Colors.white),
                         textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => _processing ? null : _lookUpManual(),
+                        onSubmitted: (_) =>
+                            _processing ? null : _lookUpManual(),
                         decoration: InputDecoration(
                           hintText: 'Student ID  (e.g. 5)',
-                          hintStyle: const TextStyle(color: Colors.white38),
+                          hintStyle:
+                              const TextStyle(color: Colors.white38),
                           filled: true,
                           fillColor: const Color(0xFF1A1A2E),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                          prefixIcon: const Icon(Icons.tag, color: Colors.white38, size: 18),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none),
+                          prefixIcon: const Icon(Icons.tag,
+                              color: Colors.white38, size: 18),
                         ),
                       ),
                     ),
@@ -373,8 +436,10 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
                         onPressed: _processing ? null : _lookUpManual,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _kOrange,
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 20),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
                         ),
                         child: const Text('Look Up'),
                       ),
@@ -389,13 +454,22 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     );
   }
 
-  Widget _corner({double? top, double? bottom, double? left, double? right, required int rotate}) {
+  Widget _corner(
+      {double? top,
+      double? bottom,
+      double? left,
+      double? right,
+      required int rotate}) {
     return Positioned(
-      top: top, bottom: bottom, left: left, right: right,
+      top: top,
+      bottom: bottom,
+      left: left,
+      right: right,
       child: RotatedBox(
         quarterTurns: rotate,
         child: Container(
-          width: 24, height: 24,
+          width: 24,
+          height: 24,
           decoration: const BoxDecoration(
             border: Border(
               top: BorderSide(color: Colors.white, width: 3),
@@ -414,7 +488,8 @@ class _StudentOrdersSheet extends StatefulWidget {
   final Map<String, dynamic> user;
   final List<dynamic> orders;
   final String token;
-  const _StudentOrdersSheet({required this.user, required this.orders, required this.token});
+  const _StudentOrdersSheet(
+      {required this.user, required this.orders, required this.token});
 
   @override
   State<_StudentOrdersSheet> createState() => _StudentOrdersSheetState();
@@ -429,19 +504,25 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
   @override
   void initState() {
     super.initState();
-    _orders = widget.orders.map((o) => Map<String, dynamic>.from(o as Map)).toList();
+    _orders = widget.orders
+        .map((o) => Map<String, dynamic>.from(o as Map))
+        .toList();
   }
 
   Future<void> _markDelivered(int orderId) async {
     try {
-      final res = await ApiService.updateOrderStatus(widget.token, orderId, 'delivered');
+      final res =
+          await ApiService.updateOrderStatus(widget.token, orderId, 'delivered');
       if (res['success'] == true && mounted) {
         setState(() {
           final idx = _orders.indexWhere((o) => o['id'] == orderId);
-          if (idx != -1) _orders[idx] = {..._orders[idx], 'status': 'delivered'};
+          if (idx != -1)
+            _orders[idx] = {..._orders[idx], 'status': 'delivered'};
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Marked as delivered ✓'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('Marked as delivered ✓'),
+              backgroundColor: Colors.green),
         );
       }
     } catch (_) {}
@@ -449,13 +530,20 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
 
   static Color _statusColor(String s) {
     switch (s) {
-      case 'pending':   return Colors.orange;
-      case 'confirmed': return Colors.blue;
-      case 'preparing': return Colors.purple;
-      case 'ready':     return Colors.teal;
-      case 'delivered': return Colors.green;
-      case 'cancelled': return Colors.red;
-      default:          return Colors.grey;
+      case 'pending':
+        return Colors.orange;
+      case 'confirmed':
+        return Colors.blue;
+      case 'preparing':
+        return Colors.purple;
+      case 'ready':
+        return Colors.teal;
+      case 'delivered':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -464,10 +552,13 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
     final name = widget.user['name'] as String? ?? 'Student';
     final email = widget.user['email'] as String? ?? '';
 
-    final activeOrders = _orders.where((o) => !['delivered', 'cancelled'].contains(o['status'])).toList();
+    final activeOrders = _orders
+        .where((o) => !['delivered', 'cancelled'].contains(o['status']))
+        .toList();
     final totalPlates = activeOrders.fold<int>(0, (sum, o) {
       final items = (o['items'] as List<dynamic>?) ?? [];
-      return sum + items.fold<int>(0, (s, i) => s + (i['quantity'] as int? ?? 0));
+      return sum +
+          items.fold<int>(0, (s, i) => s + (i['quantity'] as int? ?? 0));
     });
 
     return DraggableScrollableSheet(
@@ -479,12 +570,15 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
         children: [
           Container(
             margin: const EdgeInsets.only(top: 12, bottom: 6),
-            width: 40, height: 4,
-            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2)),
           ),
-
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Row(
               children: [
                 CircleAvatar(
@@ -492,28 +586,47 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
                   backgroundColor: _kOrange.withOpacity(0.15),
                   child: Text(
                     name.isNotEmpty ? name[0].toUpperCase() : 'S',
-                    style: const TextStyle(color: _kOrange, fontSize: 20, fontWeight: FontWeight.w900),
+                    style: const TextStyle(
+                        color: _kOrange,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900),
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(child: Column(
+                Expanded(
+                    child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17)),
-                    Text(email, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                    Text(name,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 17)),
+                    Text(email,
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12)),
                   ],
                 )),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: _kOrange.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _kOrange.withOpacity(0.4)),
+                    border:
+                        Border.all(color: _kOrange.withOpacity(0.4)),
                   ),
                   child: Column(
                     children: [
-                      Text('$totalPlates', style: const TextStyle(color: _kOrange, fontSize: 24, fontWeight: FontWeight.w900, height: 1)),
-                      const Text('plates', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      Text('$totalPlates',
+                          style: const TextStyle(
+                              color: _kOrange,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              height: 1)),
+                      const Text('plates',
+                          style: TextStyle(
+                              color: Colors.white54, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -521,22 +634,29 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
             ),
           ),
           const Divider(color: Colors.white12),
-
           Expanded(
             child: _orders.isEmpty
-                ? const Center(child: Text('No orders found', style: TextStyle(color: Colors.white54)))
+                ? const Center(
+                    child: Text('No orders found',
+                        style: TextStyle(color: Colors.white54)))
                 : ListView.builder(
                     controller: scrollCtrl,
                     padding: const EdgeInsets.all(16),
                     itemCount: _orders.length,
                     itemBuilder: (_, i) {
                       final order = _orders[i];
-                      final status = order['status'] as String? ?? 'pending';
-                      final items = (order['items'] as List<dynamic>?) ?? [];
+                      final status =
+                          order['status'] as String? ?? 'pending';
+                      final items =
+                          (order['items'] as List<dynamic>?) ?? [];
                       final color = _statusColor(status);
-                      final isActive = !['delivered', 'cancelled'].contains(status);
+                      final isActive = !['delivered', 'cancelled']
+                          .contains(status);
                       final date = order['created_at'] != null
-                          ? DateFormat('dd MMM, hh:mm a').format(DateTime.parse(order['created_at'] as String).toLocal())
+                          ? DateFormat('dd MMM, hh:mm a').format(
+                              DateTime.parse(
+                                      order['created_at'] as String)
+                                  .toLocal())
                           : '';
 
                       return Container(
@@ -544,45 +664,92 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
                         decoration: BoxDecoration(
                           color: _kDark,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: color.withOpacity(0.3)),
+                          border: Border.all(
+                              color: color.withOpacity(0.3)),
                         ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                              padding: const EdgeInsets.fromLTRB(
+                                  14, 12, 14, 8),
                               child: Row(children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
-                                  child: Text(status.toUpperCase(), style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 11)),
+                                  padding:
+                                      const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                      color:
+                                          color.withOpacity(0.15),
+                                      borderRadius:
+                                          BorderRadius.circular(8)),
+                                  child: Text(
+                                      status.toUpperCase(),
+                                      style: TextStyle(
+                                          color: color,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 11)),
                                 ),
                                 const SizedBox(width: 8),
-                                Text('Order #${order['id']}', style: const TextStyle(color: Colors.white60, fontSize: 13)),
+                                Text('Order #${order['id']}',
+                                    style: const TextStyle(
+                                        color: Colors.white60,
+                                        fontSize: 13)),
                                 const Spacer(),
-                                Text(date, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                                Text(date,
+                                    style: const TextStyle(
+                                        color: Colors.white38,
+                                        fontSize: 11)),
                               ]),
                             ),
                             if (items.isNotEmpty)
                               Padding(
-                                padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                                padding: const EdgeInsets.fromLTRB(
+                                    14, 0, 14, 8),
                                 child: Column(
                                   children: items.map((item) {
-                                    final p = item['product'] as Map<String, dynamic>?;
-                                    final qty = item['quantity'] as int? ?? 0;
+                                    final p = item['product']
+                                        as Map<String, dynamic>?;
+                                    final qty =
+                                        item['quantity'] as int? ?? 0;
                                     return Padding(
-                                      padding: const EdgeInsets.only(bottom: 6),
+                                      padding: const EdgeInsets.only(
+                                          bottom: 6),
                                       child: Row(children: [
                                         Container(
-                                          width: 30, height: 30,
-                                          decoration: BoxDecoration(color: _kOrange.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
-                                          child: Center(child: Text('$qty', style: const TextStyle(color: _kOrange, fontWeight: FontWeight.w900, fontSize: 13))),
+                                          width: 30,
+                                          height: 30,
+                                          decoration: BoxDecoration(
+                                              color: _kOrange
+                                                  .withOpacity(0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                      6)),
+                                          child: Center(
+                                              child: Text('$qty',
+                                                  style: const TextStyle(
+                                                      color: _kOrange,
+                                                      fontWeight:
+                                                          FontWeight
+                                                              .w900,
+                                                      fontSize: 13))),
                                         ),
                                         const SizedBox(width: 10),
                                         Expanded(
-                                          child: Text(p?['name'] ?? 'Item', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+                                          child: Text(
+                                              p?['name'] ?? 'Item',
+                                              style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 14,
+                                                  fontWeight:
+                                                      FontWeight.w500)),
                                         ),
-                                        Text('× $qty plate${qty > 1 ? 's' : ''}', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                                        Text(
+                                            '× $qty plate${qty > 1 ? 's' : ''}',
+                                            style: const TextStyle(
+                                                color: Colors.white38,
+                                                fontSize: 12)),
                                       ]),
                                     );
                                   }).toList(),
@@ -590,17 +757,28 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
                               ),
                             if (isActive)
                               Padding(
-                                padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                                padding: const EdgeInsets.fromLTRB(
+                                    14, 0, 14, 12),
                                 child: SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton.icon(
-                                    onPressed: () => _markDelivered(order['id'] as int),
-                                    icon: const Icon(Icons.check_circle_outline, size: 18),
-                                    label: const Text('Mark as Delivered'),
+                                    onPressed: () => _markDelivered(
+                                        order['id'] as int),
+                                    icon: const Icon(
+                                        Icons.check_circle_outline,
+                                        size: 18),
+                                    label: const Text(
+                                        'Mark as Delivered'),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green.shade700,
-                                      padding: const EdgeInsets.symmetric(vertical: 10),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      backgroundColor:
+                                          Colors.green.shade700,
+                                      padding:
+                                          const EdgeInsets.symmetric(
+                                              vertical: 10),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(
+                                                  10)),
                                     ),
                                   ),
                                 ),

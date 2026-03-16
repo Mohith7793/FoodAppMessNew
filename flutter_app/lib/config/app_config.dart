@@ -14,7 +14,7 @@
 ///   • Mac Terminal: ifconfig en0 | grep "inet " | awk '{print $2}'
 ///   • Windows cmd:  ipconfig | findstr "IPv4"
 /// ─────────────────────────────────────────────────────────────────────────────
-import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppConfig {
@@ -56,8 +56,10 @@ class AppConfig {
 
   static String get serverHost {
     if (_customHost != null && _customHost!.isNotEmpty) return _customHost!;
-    if (Platform.isAndroid) return androidDefaultHost;
-    return 'localhost'; // iOS Simulator or macOS
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return androidDefaultHost;
+    }
+    return 'localhost'; // iOS Simulator, macOS, or web
   }
 
   static int get serverPort => _customPort ?? defaultPort;
