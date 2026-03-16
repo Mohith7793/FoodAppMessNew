@@ -21,6 +21,7 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
 
   late final MobileScannerController _cameraCtrl;
   bool _processing = false;
+  String? _lastScannedRaw; // track last scan to show feedback
   final _manualCtrl = TextEditingController();
 
   @override
@@ -69,12 +70,20 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
       } catch (_) {}
     }
 
-    if (userId == null) return;
+    if (userId == null) {
+      // QR detected but not a valid student code — show feedback
+      if (mounted) {
+        setState(() => _lastScannedRaw = raw);
+        _showErrorDialog(
+          title: 'Invalid QR Code',
+          message: 'This QR code is not a student order code.\n\nScanned: ${raw.length > 80 ? raw.substring(0, 80) + '...' : raw}',
+        );
+      }
+      return;
+    }
 
-    // Stop camera while processing to prevent duplicate scans
     await _cameraCtrl.stop();
     await _fetchAndShowOrders(userId);
-    // Restart camera after sheet is dismissed
     if (mounted) await _cameraCtrl.start();
   }
 
@@ -88,19 +97,41 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
       if (res['success'] == true) {
         await _showOrdersSheet(res['data'] as Map<String, dynamic>);
       } else {
-        _showError(res['message'] as String? ?? 'User not found');
+        final msg = res['message'] as String? ?? 'User not found';
+        _showErrorDialog(title: 'Not Found', message: msg);
       }
     } catch (e) {
-      if (mounted) _showError('Connection error');
+      if (mounted) {
+        _showErrorDialog(
+          title: 'Connection Error',
+          message: 'Could not reach the server.\n\nMake sure:\n• Backend is running on your Mac\n• Both devices are on the same WiFi\n• IP in AppConfig is correct\n\nDetails: $e',
+        );
+      }
     } finally {
       if (mounted) setState(() => _processing = false);
     }
   }
 
-  void _showError(String msg) {
+  void _showErrorDialog({required String title, required String message}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: _kCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(children: [
+          const Icon(Icons.error_outline, color: Colors.redAccent, size: 22),
+          const SizedBox(width: 8),
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+        ]),
+        content: Text(message, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK', style: TextStyle(color: _kOrange, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -123,7 +154,10 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
 
   Future<void> _lookUpManual() async {
     final id = int.tryParse(_manualCtrl.text.trim());
-    if (id == null) { _showError('Enter a valid numeric ID'); return; }
+    if (id == null) {
+      _showErrorDialog(title: 'Invalid Input', message: 'Please enter a valid numeric student ID.');
+      return;
+    }
     _manualCtrl.clear();
     FocusScope.of(context).unfocus();
     await _cameraCtrl.stop();
@@ -154,6 +188,11 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
                         const Text('Camera unavailable', style: TextStyle(color: Colors.white54, fontSize: 15)),
                         const SizedBox(height: 6),
                         Text(error.errorCode.name, style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Use manual entry below',
+                          style: const TextStyle(color: _kOrange, fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
                         const SizedBox(height: 16),
                         ElevatedButton(
                           onPressed: () => _cameraCtrl.start(),
@@ -173,7 +212,6 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
                       border: Border.all(color: _kOrange, width: 3),
                     ),
                     child: Stack(children: [
-                      // Corner accents
                       _corner(top: 0, left: 0, rotate: 0),
                       _corner(top: 0, right: 0, rotate: 1),
                       _corner(bottom: 0, left: 0, rotate: 3),
@@ -285,7 +323,6 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     );
   }
 
-  // Corner accent widget for the scan frame
   Widget _corner({double? top, double? bottom, double? left, double? right, required int rotate}) {
     return Positioned(
       top: top, bottom: bottom, left: left, right: right,
@@ -361,7 +398,6 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
     final name = widget.user['name'] as String? ?? 'Student';
     final email = widget.user['email'] as String? ?? '';
 
-    // Total plates across active (non-delivered/cancelled) orders
     final activeOrders = _orders.where((o) => !['delivered', 'cancelled'].contains(o['status'])).toList();
     final totalPlates = activeOrders.fold<int>(0, (sum, o) {
       final items = (o['items'] as List<dynamic>?) ?? [];
@@ -375,14 +411,12 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
       expand: false,
       builder: (_, scrollCtrl) => Column(
         children: [
-          // Handle bar
           Container(
             margin: const EdgeInsets.only(top: 12, bottom: 6),
             width: 40, height: 4,
             decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
           ),
 
-          // Student header
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             child: Row(
@@ -403,7 +437,6 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
                     Text(email, style: const TextStyle(color: Colors.white54, fontSize: 12)),
                   ],
                 )),
-                // Total plates badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
@@ -423,7 +456,6 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
           ),
           const Divider(color: Colors.white12),
 
-          // Orders list
           Expanded(
             child: _orders.isEmpty
                 ? const Center(child: Text('No orders found', style: TextStyle(color: Colors.white54)))
@@ -451,7 +483,6 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Order header
                             Padding(
                               padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
                               child: Row(children: [
@@ -466,7 +497,6 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
                                 Text(date, style: const TextStyle(color: Colors.white38, fontSize: 11)),
                               ]),
                             ),
-                            // Items with quantities
                             if (items.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
@@ -492,7 +522,6 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
                                   }).toList(),
                                 ),
                               ),
-                            // Mark delivered button
                             if (isActive)
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
