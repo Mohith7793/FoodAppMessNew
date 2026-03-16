@@ -47,6 +47,10 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Camera is used to scan student QR codes for order verification.</string>
 
+	<!-- Photo library permission for QR scan from image (iOS simulator / Mac) -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Select a screenshot containing a student QR code to scan it.</string>
+
 	<!-- Allow HTTP (non-HTTPS) for development -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
