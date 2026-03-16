@@ -4,6 +4,7 @@ import '../models/product_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import '../screens/cart_screen.dart';
+import '../config/app_config.dart';
 
 class ProductCard extends StatefulWidget {
   final Product product;
@@ -100,7 +101,7 @@ class _ProductCardState extends State<ProductCard> with SingleTickerProviderStat
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                       child: widget.product.imageUrl != null
                           ? Image.network(
-                              widget.product.imageUrl!,
+                              AppConfig.resolveImageUrl(widget.product.imageUrl),
                               width: double.infinity,
                               height: double.infinity,
                               fit: BoxFit.cover,
