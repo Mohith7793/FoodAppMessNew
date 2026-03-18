@@ -125,13 +125,44 @@ class OrderSuccessScreen extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
-                  QrImageView(
-                    data: _qrData,
-                    version: QrVersions.auto,
-                    size: 220,
-                    backgroundColor: Colors.white,
-                    errorCorrectionLevel: QrErrorCorrectLevel.M,
-                  ),
+                  if (order.status == 'delivered')
+                    Container(
+                      width: 220,
+                      height: 220,
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green.shade600, size: 64),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Order Delivered',
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'QR code has expired',
+                            style: TextStyle(color: Colors.green.shade500, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    QrImageView(
+                      data: _qrData,
+                      version: QrVersions.auto,
+                      size: 220,
+                      backgroundColor: Colors.white,
+                      errorCorrectionLevel: QrErrorCorrectLevel.M,
+                    ),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

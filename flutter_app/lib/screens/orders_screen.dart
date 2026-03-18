@@ -386,15 +386,16 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
                     ),
                   ),
                   const Spacer(),
-                  TextButton.icon(
-                    onPressed: () => setState(() => _showQR = !_showQR),
-                    icon: Icon(_showQR ? Icons.list : Icons.qr_code,
-                        size: 18, color: const Color(0xFFFF6B35)),
-                    label: Text(
-                      _showQR ? 'View Items' : 'Show QR',
-                      style: const TextStyle(color: Color(0xFFFF6B35), fontWeight: FontWeight.w700),
+                  if (!['delivered', 'cancelled'].contains(widget.order.status))
+                    TextButton.icon(
+                      onPressed: () => setState(() => _showQR = !_showQR),
+                      icon: Icon(_showQR ? Icons.list : Icons.qr_code,
+                          size: 18, color: const Color(0xFFFF6B35)),
+                      label: Text(
+                        _showQR ? 'View Items' : 'Show QR',
+                        style: const TextStyle(color: Color(0xFFFF6B35), fontWeight: FontWeight.w700),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
