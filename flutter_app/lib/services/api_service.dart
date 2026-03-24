@@ -180,4 +180,11 @@ class ApiService {
     final res = await http.get(Uri.parse('$baseUrl/admin/orders/plates'), headers: _headers(token: token)).timeout(_timeout);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
+
+  // ── ADMIN: DEMAND FORECAST ─────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getForecast(String token) async {
+    final res = await http.get(Uri.parse('$baseUrl/admin/forecast'), headers: _headers(token: token)).timeout(_timeout);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
 }
