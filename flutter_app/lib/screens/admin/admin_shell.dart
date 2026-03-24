@@ -5,6 +5,7 @@ import 'dashboard_screen.dart';
 import 'product_management_screen.dart';
 import 'global_orders_screen.dart';
 import 'staff_management_screen.dart';
+import 'forecast_screen.dart';
 
 class AdminShell extends StatefulWidget {
   const AdminShell({super.key});
@@ -31,6 +32,7 @@ class _AdminShellState extends State<AdminShell> {
       if (isAdmin) _NavItem(icon: Icons.restaurant_menu_outlined, activeIcon: Icons.restaurant_menu, label: 'Products', screen: const ProductManagementScreen()),
       _NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long, label: 'Orders', screen: const GlobalOrdersScreen()),
       if (isAdmin) _NavItem(icon: Icons.people_outline, activeIcon: Icons.people, label: 'Staff', screen: const StaffManagementScreen()),
+      if (isAdmin) _NavItem(icon: Icons.auto_graph_outlined, activeIcon: Icons.auto_graph, label: 'Forecast', screen: const ForecastScreen()),
     ];
   }
 

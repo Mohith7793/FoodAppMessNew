@@ -64,12 +64,15 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     if (raw == null || raw.isEmpty) return;
 
     int? userId = int.tryParse(raw.trim());
+    int? orderId;
 
     if (userId == null) {
       try {
         final json = jsonDecode(raw) as Map<String, dynamic>;
         final dynamic uid = json['user_id'];
         if (uid != null) userId = int.tryParse(uid.toString());
+        final dynamic oid = json['order_id'];
+        if (oid != null) orderId = int.tryParse(oid.toString());
       } catch (_) {}
     }
 
@@ -86,11 +89,11 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     }
 
     await _cameraCtrl.stop();
-    await _fetchAndShowOrders(userId);
+    await _fetchAndShowOrders(userId, orderId: orderId);
     if (mounted) await _cameraCtrl.start();
   }
 
-  Future<void> _fetchAndShowOrders(int userId) async {
+  Future<void> _fetchAndShowOrders(int userId, {int? orderId}) async {
     if (!mounted) return;
     setState(() => _processing = true);
     try {
@@ -98,7 +101,25 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
       final res = await ApiService.getOrdersByUser(token, userId);
       if (!mounted) return;
       if (res['success'] == true) {
-        await _showOrdersSheet(res['data'] as Map<String, dynamic>);
+        final data = res['data'] as Map<String, dynamic>;
+
+        // If QR contains a specific order_id, check if it's already delivered
+        if (orderId != null) {
+          final orders = (data['orders'] as List<dynamic>?) ?? [];
+          final scannedOrder = orders.firstWhere(
+            (o) => (o as Map<String, dynamic>)['id'] == orderId,
+            orElse: () => null,
+          );
+          if (scannedOrder != null) {
+            final status = (scannedOrder as Map<String, dynamic>)['status'] as String? ?? '';
+            if (status == 'delivered') {
+              _showAlreadyDeliveredDialog(scannedOrder);
+              return;
+            }
+          }
+        }
+
+        await _showOrdersSheet(data, highlightOrderId: orderId);
       } else {
         final msg = res['message'] as String? ?? 'User not found';
         _showErrorDialog(title: 'Not Found', message: msg);
@@ -114,6 +135,54 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     } finally {
       if (mounted) setState(() => _processing = false);
     }
+  }
+
+  void _showAlreadyDeliveredDialog(Map<String, dynamic> order) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: _kCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(children: [
+          const Icon(Icons.check_circle, color: Colors.green, size: 26),
+          const SizedBox(width: 10),
+          const Text('Already Delivered',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This order has already been delivered. The QR code is no longer valid.',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.green.withOpacity(0.3)),
+              ),
+              child: Text(
+                'Order #${order['id']}',
+                style: const TextStyle(
+                    color: Colors.green, fontWeight: FontWeight.w800, fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK',
+                style: TextStyle(color: _kOrange, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showErrorDialog({required String title, required String message}) {
@@ -146,7 +215,7 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
     );
   }
 
-  Future<void> _showOrdersSheet(Map<String, dynamic> data) async {
+  Future<void> _showOrdersSheet(Map<String, dynamic> data, {int? highlightOrderId}) async {
     if (!mounted) return;
     final user = data['user'] as Map<String, dynamic>;
     final orders = (data['orders'] as List<dynamic>?) ?? [];
@@ -160,6 +229,7 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
         user: user,
         orders: orders,
         token: context.read<AuthProvider>().token!,
+        highlightOrderId: highlightOrderId,
       ),
     );
   }
@@ -186,11 +256,14 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
 
       final raw = capture.barcodes.firstOrNull?.rawValue ?? '';
       int? userId = int.tryParse(raw.trim());
+      int? orderId;
       if (userId == null) {
         try {
           final json = jsonDecode(raw) as Map<String, dynamic>;
           final dynamic uid = json['user_id'];
           if (uid != null) userId = int.tryParse(uid.toString());
+          final dynamic oid = json['order_id'];
+          if (oid != null) orderId = int.tryParse(oid.toString());
         } catch (_) {}
       }
 
@@ -204,7 +277,7 @@ class _StaffQrScannerScreenState extends State<StaffQrScannerScreen>
       }
 
       setState(() => _processing = false);
-      await _fetchAndShowOrders(userId);
+      await _fetchAndShowOrders(userId, orderId: orderId);
     } catch (e) {
       if (mounted) {
         _showErrorDialog(
@@ -488,8 +561,9 @@ class _StudentOrdersSheet extends StatefulWidget {
   final Map<String, dynamic> user;
   final List<dynamic> orders;
   final String token;
+  final int? highlightOrderId;
   const _StudentOrdersSheet(
-      {required this.user, required this.orders, required this.token});
+      {required this.user, required this.orders, required this.token, this.highlightOrderId});
 
   @override
   State<_StudentOrdersSheet> createState() => _StudentOrdersSheetState();
@@ -507,6 +581,14 @@ class _StudentOrdersSheetState extends State<_StudentOrdersSheet> {
     _orders = widget.orders
         .map((o) => Map<String, dynamic>.from(o as Map))
         .toList();
+    // Sort so the scanned order appears first
+    if (widget.highlightOrderId != null) {
+      _orders.sort((a, b) {
+        if (a['id'] == widget.highlightOrderId) return -1;
+        if (b['id'] == widget.highlightOrderId) return 1;
+        return 0;
+      });
+    }
   }
 
   Future<void> _markDelivered(int orderId) async {

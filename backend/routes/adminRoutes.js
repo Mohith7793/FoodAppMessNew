@@ -10,6 +10,7 @@ const {
   getOrdersByUser, getPlatesSummary,
   getAdminProducts,
 } = require('../controllers/adminController');
+const { getForecast } = require('../controllers/forecastController');
 const { authenticate, authorizeAdmin, authorizeAdminOrStaff } = require('../middleware/authMiddleware');
 
 // Image upload storage
@@ -47,6 +48,9 @@ router.get('/orders', authorizeAdminOrStaff, getGlobalOrders);
 router.get('/orders/plates', authorizeAdminOrStaff, getPlatesSummary);
 router.get('/orders/user/:userId', authorizeAdminOrStaff, getOrdersByUser);
 router.put('/orders/:id/status', authorizeAdminOrStaff, updateOrderStatus);
+
+// ── Demand Forecast (admin only) ──────────────────────────────────────────────
+router.get('/forecast', authorizeAdmin, getForecast);
 
 // ── Admin Products (admin only, includes unavailable) ─────────────────────────
 router.get('/products', authorizeAdmin, getAdminProducts);
